@@ -81,9 +81,9 @@ def project_uv_smart(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
     # 頂点を全選択した状態とする
     bpy.ops.mesh.select_all(action='SELECT')
     
-    # デフォルト設定のスマートUV展開を実行する
-    # 角度制限：66,島の余白：0,エリアウェイト：0,アスペクト比の補正：True,UV境界に合わせる：True
-    bpy.ops.uv.smart_project(angle_limit=66, island_margin=0, 
+    # スマートUV展開を実行する
+    # 角度制限：66,島の余白：0.1,エリアウェイト：0,アスペクト比の補正：True,UV境界に合わせる：True
+    bpy.ops.uv.smart_project(angle_limit=66, island_margin=0.1,
       user_area_weight=0, use_aspect=True, stretch_to_bounds=True)
     
     # オブジェクトモードに移行する
