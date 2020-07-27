@@ -15,6 +15,8 @@ if "bpy" in locals():
         importlib.reload(bake_smoothness_texture)
     if "bake_materialnormal_texture" in locals():
         importlib.reload(bake_materialnormal_texture)
+    if "control_uvlayer" in locals():
+        importlib.reload(control_uvlayer)
     if "save_replace_datas" in locals():
         importlib.reload(save_replace_datas)
     if "manager_material_MRTKstandard" in locals():
@@ -27,6 +29,7 @@ from . import bake_ambientocclusion_texture
 from . import bake_whiteemission_texture
 from . import bake_smoothness_texture
 from . import bake_materialnormal_texture
+from . import control_uvlayer
 from . import save_replace_datas
 from . import manager_material_MRTKstandard
 
@@ -35,7 +38,7 @@ from . import manager_material_MRTKstandard
 bl_info = {
     "name": "HoloMon MRTK ChannelMap Maker Addon",   # プラグイン名
     "author": "HoloMon",                             # 制作者名
-    "version": (1, 0),                               # バージョン
+    "version": (1, 1),                               # バージョン
     "blender": (2, 80, 0),                           # 動作可能なBlenderバージョン
     "support": "TESTING",                            # サポートレベル
     "category": "Properties",                        # カテゴリ名
@@ -494,6 +497,15 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
         if all_MRTKstandard == False:
             # マテリアルが全てMRTKStandardノードグループに設定されていない場合はエラーメッセージを表示する
             self.report({'ERROR'}, "Object : All materials must be MRTK Standard.")
+            return {'CANCELLED'}
+
+        # アクティブなUVマップレイヤーが存在するか確認する
+        # 存在しない場合は作成する
+        active_uvlayer = control_uvlayer.get_uvlayer(arg_object=target_object)
+        # UVマップレイヤーの取得、作成に失敗したか確認する
+        if active_uvlayer == None:
+            # UVマップレイヤーの取得、作成に失敗した場合はエラーメッセージを表示する
+            self.report({'ERROR'}, "Object : missing UVmap.")
             return {'CANCELLED'}
 
 
