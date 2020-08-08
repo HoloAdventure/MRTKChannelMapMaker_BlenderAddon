@@ -1,10 +1,10 @@
 # 各種ライブラリインポート
 if "bpy" in locals():
     import importlib
-    if "manager_material_MRTKstandard" in locals():
-        importlib.reload(manager_material_MRTKstandard)
+    if "accessor_control_MRTKstandard" in locals():
+        importlib.reload(accessor_control_MRTKstandard)
 import bpy
-from . import manager_material_MRTKstandard
+from . import accessor_control_MRTKstandard
 
 # 指定オブジェクトの白黒エミッションを画像テクスチャにベイクする
 def bake_whiteemission_texture(arg_object:bpy.types.Object,
@@ -45,7 +45,7 @@ def bake_whiteemission_texture(arg_object:bpy.types.Object,
             continue
 
         # 指定マテリアルのアクティブな出力ノードに接続されたMRTKStandardのカラーとrgbミックスの接続を切る
-        manager_material_MRTKstandard.link_joint_color_rgbmix_MRTKStandard(arg_material=target_material, arg_unjoint=True)
+        accessor_control_MRTKstandard.setting_MRTKStandardNodeGroup_bake_whiteemission_mode()
 
         # 新規テクスチャを参照する画像ノードを追加する
         add_node = add_node_image(
@@ -79,7 +79,7 @@ def bake_whiteemission_texture(arg_object:bpy.types.Object,
             continue
 
         # 指定マテリアルのアクティブな出力ノードに接続されたMRTKStandardのカラーとrgbミックスの接続を元に戻す
-        manager_material_MRTKstandard.link_joint_color_rgbmix_MRTKStandard(arg_material=target_material, arg_unjoint=False)
+        accessor_control_MRTKstandard.setting_MRTKStandardNodeGroup_reset()
 
         # 追加した画像ノードを削除する
         delete_node_target(

@@ -1,10 +1,10 @@
 # 各種ライブラリインポート
 if "bpy" in locals():
     import importlib
-    if "manager_material_MRTKstandard" in locals():
-        importlib.reload(manager_material_MRTKstandard)
+    if "accessor_control_MRTKstandard" in locals():
+        importlib.reload(accessor_control_MRTKstandard)
 import bpy
-from . import manager_material_MRTKstandard
+from . import accessor_control_MRTKstandard
 
 # 指定オブジェクトの全てのマテリアルカラーを画像テクスチャにベイクする
 def bake_materialcolor_texture(arg_object:bpy.types.Object,
@@ -46,7 +46,7 @@ def bake_materialcolor_texture(arg_object:bpy.types.Object,
             continue
 
         # 指定マテリアルのアクティブな出力ノードに接続されたノードがMRTKStandardで透過が0以上かチェックする
-        isTrans = manager_material_MRTKstandard.check_trans_MRTKStandard(arg_material=target_material)
+        isTrans = accessor_control_MRTKstandard.check_trans_MRTKStandard(arg_material=target_material)
 
         # 指定マテリアルが透過設定か確認する
         if isTrans == True:
@@ -54,7 +54,7 @@ def bake_materialcolor_texture(arg_object:bpy.types.Object,
             continue
 
         # 指定マテリアルのアクティブな出力ノードに接続されたMRTKStandardをシンプルカラーの接続に切り替える
-        manager_material_MRTKstandard.link_switch_simple_color_MRTKStandard(arg_material=target_material, arg_simplecolor=True)
+        accessor_control_MRTKstandard.setting_MRTKStandardNodeGroup_bake_color_mode()
 
         # 新規テクスチャを参照する画像ノードを追加する
         add_node = add_node_image(
@@ -89,7 +89,7 @@ def bake_materialcolor_texture(arg_object:bpy.types.Object,
             continue
 
         # 指定マテリアルのアクティブな出力ノードに接続されたノードがMRTKStandardで透過が0以上かチェックする
-        isTrans = manager_material_MRTKstandard.check_trans_MRTKStandard(arg_material=target_material)
+        isTrans = accessor_control_MRTKstandard.check_trans_MRTKStandard(arg_material=target_material)
 
         # 指定マテリアルが透過設定か確認する
         if isTrans == True:
@@ -97,7 +97,7 @@ def bake_materialcolor_texture(arg_object:bpy.types.Object,
             continue
 
         # 指定マテリアルのアクティブな出力ノードに接続されたMRTKStandardを元に戻す
-        manager_material_MRTKstandard.link_switch_simple_color_MRTKStandard(arg_material=target_material, arg_simplecolor=False)
+        accessor_control_MRTKstandard.setting_MRTKStandardNodeGroup_reset()
 
         # 追加した画像ノードを削除する
         delete_node_target(

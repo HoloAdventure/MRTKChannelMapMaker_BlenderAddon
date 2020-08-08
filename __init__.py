@@ -19,8 +19,8 @@ if "bpy" in locals():
         importlib.reload(control_uvlayer)
     if "save_replace_datas" in locals():
         importlib.reload(save_replace_datas)
-    if "manager_material_MRTKstandard" in locals():
-        importlib.reload(manager_material_MRTKstandard)
+    if "accessor_control_MRTKstandard" in locals():
+        importlib.reload(accessor_control_MRTKstandard)
 import bpy
 from . import add_material_MRTKmaterial
 from . import bake_materialcolor_texture
@@ -31,14 +31,14 @@ from . import bake_smoothness_texture
 from . import bake_materialnormal_texture
 from . import control_uvlayer
 from . import save_replace_datas
-from . import manager_material_MRTKstandard
+from . import accessor_control_MRTKstandard
 
 
 # bl_infoでプラグインに関する情報の定義を行う
 bl_info = {
     "name": "HoloMon MRTK ChannelMap Maker Addon",   # プラグイン名
     "author": "HoloMon",                             # 制作者名
-    "version": (1, 2),                               # バージョン
+    "version": (1, 3),                               # バージョン
     "blender": (2, 80, 0),                           # 動作可能なBlenderバージョン
     "support": "TESTING",                            # サポートレベル
     "category": "Properties",                        # カテゴリ名
@@ -491,7 +491,7 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
 
 
         # 対象のオブジェクトのマテリアルが全てMRTKStandardノードグループを使用したマテリアルかチェックする
-        all_MRTKstandard = manager_material_MRTKstandard.check_object_materials(arg_object=target_object)
+        all_MRTKstandard = accessor_control_MRTKstandard.check_object_materials(arg_object=target_object)
 
         # マテリアルが全てMRTKStandardノードグループか確認する
         if all_MRTKstandard == False:
