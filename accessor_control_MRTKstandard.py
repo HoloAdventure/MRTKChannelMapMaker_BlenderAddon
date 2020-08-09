@@ -18,7 +18,7 @@ def add_nodegroup_MRTKstandard(arg_material:bpy.types.Material) -> bpy.types.Nod
     """
     
     # MRTKStandard設定のノードグループを作成する
-    make_nodegroup = manager_nodegroup_MRTKstandard.new_nodegroup_MRTKStandard()
+    make_nodegroup = manager_nodegroup_MRTKstandard.make_nodegroup_MRTKStandard()
 
     # マテリアルのノードツリーに指定のノードグループを追加する
     make_shadenode = manager_nodegroup_MRTKstandard.add_nodegroup_target(arg_material=arg_material)

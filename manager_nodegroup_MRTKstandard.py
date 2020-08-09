@@ -5,11 +5,12 @@ import bpy
 def_nodegroup_name = "MRTKStandardNodeGroup"
 
 # ノードバージョン
-def_nodegroup_version = "MRTKStandardNode 1.1"
+def_nodegroup_version = "MRTKStandardNode 1.2"
 
 # ノードグループ内の各種ノード名を定義する
 def_inputnode_name = "MRTKStandardInputNode"           # 入力ノード名
 def_outputnode_name = "MRTKStandardOutputNode"         # 出力ノード名
+def_versionnode_name = "MRTKStandardVersionNode"       # バージョン記載ノード名
 def_bsdfnode_name = "MRTKStandardBSDFNode"             # プリンシプルBSDFノード名
 def_rgbmixnode_name = "MRTKStandardRGBMix"             # RGBミックスノード名
 def_smoothinvnode_name = "MRTKStandardSmoothInversion" # 滑らかさ数値反転ノード名
@@ -45,7 +46,6 @@ def_rgbmixnode_output_color_name = "Color"          # カラー出力
 def_smoothinvnode_input_mainvalue_num = 0           # メイン値入力端子
 def_smoothinvnode_input_subvalue_num = 1            # サブ値入力端子
 def_smoothinvnode_output_value_name = "Value"       # 値出力
-
 
 # 指定ノードがMRTKStandardかチェックする
 def check_isnode_MRTKStandardNode(arg_node:bpy.types.Node) -> bool:
@@ -109,6 +109,96 @@ def check_trans_MRTKStandardNode(arg_node:bpy.types.Node) -> bool:
         
     return isTrans
 
+# マテリアルのノードツリーにMRTKStandardノードグループを追加する
+def add_nodegroup_target(arg_material:bpy.types.Material) -> bpy.types.Node:
+    """マテリアルのノードツリーにMRTKStandardノードグループを追加する
+
+    Args:
+        arg_material (bpy.types.Material): 指定マテリアル
+
+    Returns:
+        bpy.types.Node: 作成ノードの参照
+    """
+
+    # データ内に既にMRTKStandardのノードグループが定義されているか確認する
+    # (get関数は対象が存在しない場合 None が返る)
+    get_nodegroup = bpy.data.node_groups.get(def_nodegroup_name)
+
+    # ノードグループが取得できたか確認する
+    if get_nodegroup == None:
+        # ノードグループが定義されていない場合はノードグループを新規作成する
+        get_nodegroup = new_nodegroup_MRTKStandard()
+        
+    # 新規マテリアルのノードグループ参照を取得する
+    mat_nodes = arg_material.node_tree.nodes
+
+    # ノードグループを追加する
+    add_node = mat_nodes.new(type='ShaderNodeGroup')
+    add_node.location = (-100, 0)
+
+    # データの参照をカスタムノードに変更する
+    add_node.node_tree = get_nodegroup
+
+    return add_node
+
+# MRTKStandard設定を構成するノードグループの入力UIを設定する
+def setting_node_MRTKStandard_ui(arg_node:bpy.types.Node) -> bpy.types.Node:
+    """MRTKStandard設定を構成するノードグループの入力UIを設定する
+
+    Args:
+        arg_node (bpy.types.Node): 指定ノードグループ(ノード参照)
+
+    Returns:
+        bpy.types.Node: 作成ノードの参照
+    """
+
+    # ノードバージョンをラベルに記述する
+    arg_node.label = def_nodegroup_version
+
+    # ノーマル設定のデフォルト値を隠蔽する
+    input_normal = arg_node.inputs[def_inputnode_input_normal_name]
+    input_normal.hide_value = True
+
+    return arg_node
+
+# 現在バージョンのMRTKStandardのノードグループを作成する
+def make_nodegroup_MRTKStandard() -> bpy.types.NodeGroup:
+    """現在バージョンのMRTKStandardのノードグループを作成する
+
+    Returns:
+        bpy.types.NodeGroup: 作成ノードグループの参照
+    """
+    
+    # データ内に既にMRTKStandardのノードグループが定義されているか確認する
+    # (get関数は対象が存在しない場合 None が返る)
+    get_nodegroup = bpy.data.node_groups.get(def_nodegroup_name)
+
+    # ノードグループが取得できたか確認する
+    if get_nodegroup == None:
+        # ノードグループが定義されていない場合はノードグループを新規作成する
+        make_nodegroup = new_nodegroup_MRTKStandard()
+        
+        return make_nodegroup
+
+    # バージョン記載ノードを取得する
+    mrtkstandard_versionnode = get_nodegroup.nodes.get(def_versionnode_name)
+
+    # バージョン記載ノードが取得できたか確認する
+    if mrtkstandard_versionnode != None:
+        # 取得したノードグループが現在のバージョンのノードグループかチェックする
+        if mrtkstandard_versionnode.label == def_nodegroup_version:
+            # 現在バージョンのノードグループなら更新は行わない
+            return get_nodegroup
+
+    # 定義中のノードグループの内部ノードを更新する
+    update_result = update_internalnodes_MRTKStandard()
+
+    # リンク接続に成功したか
+    if update_result == False:
+        # リンク接続に失敗した場合はノードを返さない
+        return None
+
+    return get_nodegroup
 
 # MRTKStandard設定を構成するノードグループを作成する
 def new_nodegroup_MRTKStandard() -> bpy.types.NodeGroup:
@@ -136,6 +226,46 @@ def new_nodegroup_MRTKStandard() -> bpy.types.NodeGroup:
     # ノードグループに出力ノードを作成する
     group_outputnode = add_nodegroup_MRTKStandard_outputs()
 
+    # ノードグループの内部ノードを更新する
+    update_result = update_internalnodes_MRTKStandard()
+
+    return new_nodegroup
+
+# 定義中のノードグループの内部ノードを更新する
+def update_internalnodes_MRTKStandard() -> bpy.types.NodeGroup:
+    """定義中のノードグループの内部ノードを更新する
+
+    Returns:
+        bpy.types.NodeGroup: 作成ノードグループの参照
+    """
+    
+    # データ内に既にMRTKStandardのノードグループが定義されているか確認する
+    # (get関数は対象が存在しない場合 None が返る)
+    get_nodegroup = bpy.data.node_groups.get(def_nodegroup_name)
+
+    # ノードグループが取得できたか確認する
+    if get_nodegroup == None:
+        # ノードグループが定義されていない場合は処理を行わない
+        return None
+
+    # 入力出力ノードを除くノードグループ内部のノードとリンクのみ更新を行う
+    # 現在の内部ノードを全て操作する
+    for node in get_nodegroup.nodes:
+        # 入力ノードか確認する
+        if node.name == def_inputnode_name:
+            # 入力ノードの場合、処理しない
+            continue
+        # 出力ノードか確認する
+        if node.name == def_outputnode_name:
+            # 出力ノードの場合、処理しない
+            continue
+
+        # 入出力ノード以外は全て削除する
+        get_nodegroup.nodes.remove(node)
+
+    # ノードグループにバージョン記載ノードを作成する
+    group_versionnode = add_nodegroup_MRTKStandard_framenode()
+
     # ノードグループにBSDFノードを作成する
     group_bsdfnode = add_nodegroup_MRTKStandard_bsdfnode()
 
@@ -144,55 +274,16 @@ def new_nodegroup_MRTKStandard() -> bpy.types.NodeGroup:
 
     # ノードグループに滑らかさ数値反転ノードを作成する
     group_smoothinversion = add_nodegroup_MRTKStandard_smoothinversionnode()
-
+    
     # ノードグループを構成するのリンク情報を設定する
     link_result = link_MRTKStandardNodeGroup_default()
 
-    return new_nodegroup
+    # リンク接続に成功したか
+    if link_result == False:
+        # リンク接続に失敗した場合はノードを返さない
+        return None
 
-# マテリアルのノードツリーにMRTKStandardノードグループを追加する
-def add_nodegroup_target(arg_material:bpy.types.Material) -> bpy.types.Node:
-    """マテリアルのノードツリーにMRTKStandardノードグループを追加する
-
-    Args:
-        arg_material (bpy.types.Material): 指定マテリアル
-
-    Returns:
-        bpy.types.Node: 作成ノードの参照
-    """
-
-    # 新規マテリアルのノードグループ参照を取得する
-    mat_nodes = arg_material.node_tree.nodes
-
-    # ノードグループを追加する
-    nodegroup_node = mat_nodes.new(type='ShaderNodeGroup')
-    nodegroup_node.location = (-100, 0)
-
-    # データの参照をカスタムノードに変更する
-    nodegroup_node.node_tree = bpy.data.node_groups[def_nodegroup_name]
-
-    return nodegroup_node
-
-# MRTKStandard設定を構成するノードグループの入力UIを設定する
-def setting_node_MRTKStandard_ui(arg_node:bpy.types.Node) -> bpy.types.Node:
-    """MRTKStandard設定を構成するノードグループの入力UIを設定する
-
-    Args:
-        arg_node (bpy.types.Node): 指定ノードグループ(ノード参照)
-
-    Returns:
-        bpy.types.Node: 作成ノードの参照
-    """
-
-    # ノードバージョンをラベルに記述する
-    arg_node.label = def_nodegroup_version
-
-    # ノーマル設定のデフォルト値を隠蔽する
-    input_normal = arg_node.inputs[def_inputnode_input_normal_name]
-    input_normal.hide_value = True
-
-    return arg_node
-
+    return get_nodegroup
 
 # MRTKStandard設定を構成するノードグループの入力ノードを作成する
 def add_nodegroup_MRTKStandard_inputs() -> bpy.types.Node:
@@ -286,6 +377,38 @@ def add_nodegroup_MRTKStandard_outputs() -> bpy.types.Node:
     socket_bsdf = get_nodegroup.outputs.new('NodeSocketShader', def_outputnode_output_shader_name)
 
     return group_outputs
+
+# MRTKStandard設定を構成するノードグループのフレームノードを作成する
+def add_nodegroup_MRTKStandard_framenode() -> bpy.types.Node:
+    """MRTKStandard設定を構成するノードグループのフレームノードを作成する
+
+    Args:
+        arg_nodegroup (bpy.types.NodeGroup): 指定ノードグループ
+
+    Returns:
+        bpy.types.Node: 作成ノードの参照
+    """
+
+    # データ内に既にMRTKStandardのノードグループが定義されているか確認する
+    # (get関数は対象が存在しない場合 None が返る)
+    get_nodegroup = bpy.data.node_groups.get(def_nodegroup_name)
+
+    # ノードグループが取得できたか確認する
+    if get_nodegroup == None:
+        # 既にMRTKStandardのノードグループが定義されていない場合は処理しない
+        return None
+
+    # ノードグループにフレームノードを作成する
+    group_version = get_nodegroup.nodes.new(type='NodeFrame')
+    group_version.name = def_versionnode_name
+    group_version.label = def_nodegroup_version
+
+    # フレームノードの配置座標を設定する
+    group_version.location = (-800,100)
+    group_version.height = 50
+    group_version.width = 300
+
+    return
 
 # MRTKStandard設定を構成するノードグループのBSDFノードを作成する
 def add_nodegroup_MRTKStandard_bsdfnode() -> bpy.types.Node:
@@ -728,6 +851,4 @@ def link_MRTKStandardNodeGroup_joint_color_rgbmix() -> bool:
     )
 
     return True
-
-
 
