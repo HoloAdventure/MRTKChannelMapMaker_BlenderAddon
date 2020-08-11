@@ -38,7 +38,7 @@ from . import accessor_control_MRTKstandard
 bl_info = {
     "name": "HoloMon MRTK ChannelMap Maker Addon",   # プラグイン名
     "author": "HoloMon",                             # 制作者名
-    "version": (1, 3),                               # バージョン
+    "version": (1, 4),                               # バージョン
     "blender": (2, 80, 0),                           # 動作可能なBlenderバージョン
     "support": "TESTING",                            # サポートレベル
     "category": "Properties",                        # カテゴリ名
@@ -196,6 +196,65 @@ class HOLOMON_PT_addon_mrtk_channelmap_maker(Panel):
         bakemargin_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_bakemargin")
 
         # 要素行を作成する
+        button_row = draw_layout.row()
+        # ベイクを実行するボタンを配置する
+        button_row.operator("holomon.mrtk_channelmap_maker", icon='FILE_IMAGE')
+
+# マテリアルベイクのオプションパネル(3Dビュー)
+class HOLOMON_PT_addon_mrtk_channelmap_maker_option(Panel):
+    # パネルのラベル名を定義する
+    # パネルを折りたたむパネルヘッダーに表示される
+    bl_label = "MRTK ChannelMap Options"
+    # クラスのIDを定義する
+    # 命名規則は CATEGORY_PT_name
+    bl_idname = "HOLOMON_PT_addon_mrtk_channelmap_maker_option"
+    # パネルを使用する領域を定義する
+    # 利用可能な識別子は以下の通り
+    #   EMPTY：無し
+    #   VIEW_3D：3Dビューポート
+    #   IMAGE_EDITOR：UV/画像エディター
+    #   NODE_EDITOR：ノードエディター
+    #   SEQUENCE_EDITOR：ビデオシーケンサー
+    #   CLIP_EDITOR：ムービークリップエディター
+    #   DOPESHEET_EDITOR：ドープシート
+    #   GRAPH_EDITOR：グラフエディター
+    #   NLA_EDITOR：非線形アニメーション
+    #   TEXT_EDITOR：テキストエディター
+    #   CONSOLE：Pythonコンソール
+    #   INFO：情報、操作のログ、警告、エラーメッセージ
+    #   TOPBAR：トップバー
+    #   STATUSBAR：ステータスバー
+    #   OUTLINER：アウトライナ
+    #   PROPERTIES：プロパティ
+    #   FILE_BROWSER：ファイルブラウザ
+    #   PREFERENCES：設定
+    bl_space_type = 'VIEW_3D'
+    # パネルが使用される領域を定義する
+    # 利用可能な識別子は以下の通り
+    # ['WINDOW'、 'HEADER'、 'CHANNELS'、 'TEMPORARY'、 'UI'、
+    #  'TOOLS'、 'TOOL_PROPS'、 'PREVIEW'、 'HUD'、 'NAVIGATION_BAR'、
+    #  'EXECUTE'、 'FOOTER'の列挙型、 'TOOL_HEADER']
+    bl_region_type = 'UI'
+    # パネルタイプのオプションを定義する
+    # DEFAULT_CLOSED：作成時にパネルを開くか折りたたむ必要があるかを定義する。
+    # HIDE_HEADER：ヘッダーを非表示するかを定義する。Falseに設定するとパネルにはヘッダーが表示される。
+    # デフォルトは {'DEFAULT_CLOSED'}
+    bl_options = {'DEFAULT_CLOSED'}
+    # パネルの表示順番を定義する
+    # 小さい番号のパネルは、大きい番号のパネルの前にデフォルトで順序付けられる
+    # デフォルトは 0
+    bl_order = 1
+    # パネルのカテゴリ名称を定義する
+    # 3Dビューポートの場合、サイドバーの名称になる
+    # デフォルトは名称無し
+    bl_category = "MRTK"
+ 
+    # 描画の定義
+    def draw(self, context):
+        # Operatorをボタンとして配置する
+        draw_layout = self.layout
+
+        # 要素行を作成する
         baketype_metallic_row = draw_layout.row()
         # メタリックベイク指定用のカスタムプロパティを配置する
         baketype_metallic_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_baketype_metallic")
@@ -254,13 +313,6 @@ class HOLOMON_PT_addon_mrtk_channelmap_maker(Panel):
         if not context.scene.holomon_mrtk_channelmap_maker.prop_baketype_normal:
             # ノーマルマップベイク指定が無効の場合はオクルージョン設定の項目を無効化する
             normalmapsize_row.enabled = False
-
-
-        # 要素行を作成する
-        button_row = draw_layout.row()
-        # ベイクを実行するボタンを配置する
-        button_row.operator("holomon.mrtk_channelmap_maker", icon='FILE_IMAGE')
-
 
 
 # Operatorクラスの作成
@@ -628,10 +680,13 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
                 arg_texturesize=normalmap_size,
                 arg_bakemargin=normalmap_bakemargin)
 
-            # 指定ディレクトリに作成した画像ファイルを出力する
+            # 指定ディレクトリに作成した画像ファイルを出力する(16ビット色深度)
             save_replace_datas.save_image_targetdir(
                 arg_image=normalbake_image,
-                arg_directory=self.directory
+                arg_directory=self.directory,
+                arg_colormode='RGBA',
+                arg_colordepth='16',
+                arg_compression=15
             )
 
 
@@ -790,6 +845,14 @@ class HOLOMON_addon_mrtk_channelmap_maker_properties(PropertyGroup):
         description = "",             # 説明文
         update=change_baketype,       # 更新時実行関数
     )
+    
+    # シーン上のパネルに表示する新規スマートUV作成実行用のカスタムプロパティを定義する
+    prop_baketo_smartuv: BoolProperty(
+        name = "Bake To SmartUV",     # プロパティ名
+        default=False,                # デフォルト値
+        description = "",             # 説明文
+    )
+    
 
 
 # 登録に関する処理
@@ -799,6 +862,7 @@ regist_classes = (
     HOLOMON_OT_addon_mrtk_material_maker,
     HOLOMON_addon_mrtk_material_maker_properties,
     HOLOMON_PT_addon_mrtk_channelmap_maker,
+    HOLOMON_PT_addon_mrtk_channelmap_maker_option,
     HOLOMON_OT_addon_mrtk_channelmap_maker,
     HOLOMON_addon_mrtk_channelmap_maker_properties,
 )

@@ -92,12 +92,13 @@ def make_new_image(arg_texturename:str="BakeTexture",
         bpy.types.Image: 作成画像の参照
     """
 
-    # 新規画像を作成する
+    # 新規画像を作成する(32ビットFloat設定)
     newimage = bpy.data.images.new(
         name=arg_texturename,
         width=arg_texturesize,
         height=arg_texturesize,
-        alpha=True
+        alpha=True,
+        float_buffer=True
     )
 
     return newimage

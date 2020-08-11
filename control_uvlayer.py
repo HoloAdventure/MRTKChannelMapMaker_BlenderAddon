@@ -55,6 +55,34 @@ def get_uvlayer_active(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer
 
     return active_uvlayer
 
+# 指定オブジェクトのUVマップレイヤーを全て削除する
+def delete_uvlayer_all(arg_object:bpy.types.Object) -> bool:
+    """指定オブジェクトのUVマップレイヤーを全て削除する
+
+    Args:
+        arg_object (bpy.types.Object): 指定オブジェクト
+
+    Returns:
+        bool: 実行正否
+    """
+
+    # 指定オブジェクトがメッシュオブジェクトか確認する
+    if arg_object.type != 'MESH':
+        # メッシュオブジェクトでない場合は処理しない
+        return False
+
+    # 対象オブジェクトのメッシュデータを取得する
+    # メッシュデータ操作のマニュアル
+    # (https://docs.blender.org/api/current/bpy.types.Mesh.html)
+    meshdata = arg_object.data
+
+    # UVマップレイヤーのリストを取得する
+    # UVマップレイヤーのリスト操作のマニュアル
+    # (https://docs.blender.org/api/current/bpy.types.UVLoopLayers.html)
+    uv_layers = meshdata.uv_layers
+
+    return
+
 # スマートUV展開を実行する(デフォルト設定)
 def project_uv_smart(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
     """スマートUV展開を実行する(デフォルト設定)

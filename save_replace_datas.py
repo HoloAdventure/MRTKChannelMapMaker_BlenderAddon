@@ -121,12 +121,16 @@ def add_material_textureBSDF(arg_object:bpy.types.Object, arg_texture:bpy.types.
     return new_material
 
 # 指定ディレクトリにテクスチャをPNG形式で保存する
-def save_image_targetdir(arg_image:bpy.types.Image, arg_directory:str) -> bool:
+def save_image_targetdir(arg_image:bpy.types.Image, arg_directory:str,
+  arg_colormode:str='RGBA', arg_colordepth:str='8', arg_compression:int=15) -> bool:
     """指定ディレクトリにテクスチャをPNG形式で保存する
 
     Args:
         arg_image (bpy.types.Image): 保存テクスチャ
         arg_directory (str): 指定ディレクトリ
+        arg_colormode (str, optional): カラーモード指定. Defaults to 'RGBA'.
+        arg_colordepth (str, optional): 色深度指定. Defaults to '8'.
+        arg_compression (int, optional): 圧縮率指定. Defaults to 15.
 
     Returns:
         bool: 実行正否
@@ -141,8 +145,34 @@ def save_image_targetdir(arg_image:bpy.types.Image, arg_directory:str) -> bool:
     # ファイルフォーマットをPNGに設定する
     arg_image.file_format = 'PNG'
 
-    # 画像を保存する
-    arg_image.save()
+    # レンダー色空間で保存するためのシーンを取得する
+    # (https://docs.blender.org/api/current/bpy.types.Scene.html)
+    render_scene = bpy.context.scene
+
+    # 現在のカラーマネジメントのビュー変換を取得する
+    current_view_transform = render_scene.view_settings.view_transform
+
+    # カラーマネジメントのビュー変換を[標準]に設定する（Filmicだと灰色に出力されるため）
+    # (https://docs.blender.org/api/current/bpy.types.ColorManagedViewSettings.html)
+    render_scene.view_settings.view_transform = 'Standard'
+
+    # シーンのレンダリング設定からイメージフォーマット設定の参照を取得する
+    scene_imagesettings = render_scene.render.image_settings
+
+    # カラーフォーマットを設定する
+    scene_imagesettings.color_mode = arg_colormode
+
+    # 色深度を設定する
+    scene_imagesettings.color_depth = arg_colordepth
+
+    # 圧縮率を設定する
+    scene_imagesettings.compression = arg_compression
+
+    # シーンのレンダリング設定を利用して画像を保存する
+    arg_image.save_render(filepath=savepath, scene=render_scene)
+
+    # 変更したビュー変換を元に戻す
+    render_scene.view_settings.view_transform = current_view_transform
 
     return True
 
