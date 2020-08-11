@@ -1,44 +1,16 @@
 # 各種ライブラリインポート
 if "bpy" in locals():
     import importlib
-    if "add_material_MRTKmaterial" in locals():
-        importlib.reload(add_material_MRTKmaterial)
-    if "bake_materialcolor_texture" in locals():
-        importlib.reload(bake_materialcolor_texture)
-    if "bake_metallic_texture" in locals():
-        importlib.reload(bake_metallic_texture)
-    if "bake_ambientocclusion_texture" in locals():
-        importlib.reload(bake_ambientocclusion_texture)
-    if "bake_whiteemission_texture" in locals():
-        importlib.reload(bake_whiteemission_texture)
-    if "bake_smoothness_texture" in locals():
-        importlib.reload(bake_smoothness_texture)
-    if "bake_materialnormal_texture" in locals():
-        importlib.reload(bake_materialnormal_texture)
-    if "control_uvlayer" in locals():
-        importlib.reload(control_uvlayer)
-    if "save_replace_datas" in locals():
-        importlib.reload(save_replace_datas)
-    if "accessor_control_MRTKstandard" in locals():
-        importlib.reload(accessor_control_MRTKstandard)
+    if "UI_operations" in locals():
+        importlib.reload(UI_operations)
 import bpy
-from . import add_material_MRTKmaterial
-from . import bake_materialcolor_texture
-from . import bake_metallic_texture
-from . import bake_ambientocclusion_texture
-from . import bake_whiteemission_texture
-from . import bake_smoothness_texture
-from . import bake_materialnormal_texture
-from . import control_uvlayer
-from . import save_replace_datas
-from . import accessor_control_MRTKstandard
-
+from . import UI_operations
 
 # bl_infoでプラグインに関する情報の定義を行う
 bl_info = {
     "name": "HoloMon MRTK ChannelMap Maker Addon",   # プラグイン名
     "author": "HoloMon",                             # 制作者名
-    "version": (1, 4),                               # バージョン
+    "version": (1, 5),                               # バージョン
     "blender": (2, 80, 0),                           # 動作可能なBlenderバージョン
     "support": "TESTING",                            # サポートレベル
     "category": "Properties",                        # カテゴリ名
@@ -353,17 +325,26 @@ class HOLOMON_OT_addon_mrtk_material_maker(Operator):
         # 指定中のオブジェクトを確認する
         if target_obj == None:
             # オブジェクトが指定されていない場合はエラーメッセージを表示する
-            self.report({'ERROR'}, "No objects selected.")
+            self.report({'ERROR'}, "Nothing : No objects selected.")
             return {'CANCELLED'}
 
         # 指定オブジェクトがメッシュオブジェクトか確認する
         if target_obj.type != 'MESH':
             # メッシュオブジェクトでない場合は処理しない
-            self.report({'ERROR'}, "No Mesh selected.")
+            self.report({'ERROR'}, "Nothing : No Mesh selected.")
             return {'CANCELLED'}
 
         # マテリアルを追加する
-        add_material_MRTKmaterial.add_materialslot_nodegroupmaterial(arg_object=target_obj, arg_materialname="MRTKStandardMaterial")
+        error_message = UI_operations.UI_mrtk_material_maker(
+            arg_object=target_obj,
+            arg_materialname="MRTKStandardMaterial"
+        )
+        
+        # エラーメッセージの有無を確認する
+        if error_message != None:
+            # エラーメッセージが設定されている場合はエラーメッセージを表示する
+            self.report({'ERROR'}, error_message)
+            return {'CANCELLED'}
 
         return {'FINISHED'}
 
@@ -542,165 +523,76 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
         normalmap_bakemargin = int(normalmap_size / int(colortexture_size / bake_margin))
 
 
-        # 対象のオブジェクトのマテリアルが全てMRTKStandardノードグループを使用したマテリアルかチェックする
-        all_MRTKstandard = accessor_control_MRTKstandard.check_object_materials(arg_object=target_object)
+        # UIの設定から各種実行ベイクの情報を作成する
+        # カラーベイクの情報を作成する
+        color_BakeProperties = UI_operations.BakeProperties(
+            arg_execute_flg=baketype_color,
+            arg_texture_name=texture_name + "_color",
+            arg_texture_size=colortexture_size,
+            arg_bake_margin=bake_margin
+        )
 
-        # マテリアルが全てMRTKStandardノードグループか確認する
-        if all_MRTKstandard == False:
-            # マテリアルが全てMRTKStandardノードグループに設定されていない場合はエラーメッセージを表示する
-            self.report({'ERROR'}, "Object : All materials must be MRTK Standard.")
+        # メタリックベイクの情報を作成する
+        metallic_BakeProperties = UI_operations.BakeProperties(
+            arg_execute_flg=baketype_metallic,
+            arg_texture_name=texture_name + "_metallic",
+            arg_texture_size=channelmap_size,
+            arg_bake_margin=channelmap_bakemargin
+        )
+
+        # 滑らかさベイクの情報を作成する
+        smoothness_BakeProperties = UI_operations.BakeProperties(
+            arg_execute_flg=baketype_smoothness,
+            arg_texture_name=texture_name + "_smoothness",
+            arg_texture_size=channelmap_size,
+            arg_bake_margin=channelmap_bakemargin
+        )
+
+        # エミッションベイクの情報を作成する
+        emission_BakeProperties = UI_operations.BakeProperties(
+            arg_execute_flg=baketype_emission,
+            arg_texture_name=texture_name + "_emission",
+            arg_texture_size=channelmap_size,
+            arg_bake_margin=channelmap_bakemargin
+        )
+
+        # オクルージョンベイクの情報を作成する
+        occlusion_BakeProperties = UI_operations.AO_BakeProperties(
+            arg_execute_flg=baketype_occlusion,
+            arg_texture_name=texture_name + "_occlusion",
+            arg_texture_size=channelmap_size,
+            arg_bake_margin=channelmap_bakemargin,
+            arg_ao_factor=bake_aofactor,
+            arg_ao_distance=bake_aodistance
+        )
+
+        # ノーマルベイクの情報を作成する
+        normal_BakeProperties = UI_operations.BakeProperties(
+            arg_execute_flg=baketype_normal,
+            arg_texture_name=texture_name + "_normal",
+            arg_texture_size=normalmap_size,
+            arg_bake_margin=normalmap_bakemargin
+        )
+
+        
+        # チャネルマップ作成を実行する
+        error_message = UI_operations.UI_mrtk_channelmap_maker(
+            arg_tobake_object=target_object,
+            arg_export_dir=self.directory,
+            arg_export_filepath=self.filepath,
+            arg_colorbake_prop=color_BakeProperties,
+            arg_metallicbake_prop=metallic_BakeProperties,
+            arg_smoothnessbake_prop=smoothness_BakeProperties,
+            arg_emissionbake_prop=emission_BakeProperties,
+            arg_occlusionbake_prop=occlusion_BakeProperties,
+            arg_normalbake_prop=normal_BakeProperties
+        )
+        
+        # エラーメッセージの有無を確認する
+        if error_message != None:
+            # エラーメッセージが設定されている場合はエラーメッセージを表示する
+            self.report({'ERROR'}, error_message)
             return {'CANCELLED'}
-
-        # アクティブなUVマップレイヤーが存在するか確認する
-        # 存在しない場合は作成する
-        active_uvlayer = control_uvlayer.get_uvlayer(arg_object=target_object)
-        # UVマップレイヤーの取得、作成に失敗したか確認する
-        if active_uvlayer == None:
-            # UVマップレイヤーの取得、作成に失敗した場合はエラーメッセージを表示する
-            self.report({'ERROR'}, "Object : missing UVmap.")
-            return {'CANCELLED'}
-
-
-        # 作成した各テクスチャの参照を保持する
-        colorbake_image = None
-        metallicbake_image = None
-        occlusionbake_image = None
-        emissionbake_image = None
-        smoothnessbake_image = None
-        normalbake_image = None
-
-
-        # カラーベイクを実行する
-        if baketype_color:
-            # カラーベイクのテクスチャ名を作成する
-            colortexture_name = texture_name + "_color"
-
-            # 指定オブジェクトの全てのマテリアルカラーを画像テクスチャにベイクする
-            colorbake_image = bake_materialcolor_texture.bake_materialcolor_texture(
-                arg_object=target_object,
-                arg_texturename=colortexture_name,
-                arg_texturesize=colortexture_size,
-                arg_bakemargin=bake_margin
-            )
-
-            # 指定ディレクトリに作成した画像ファイルを出力する
-            save_replace_datas.save_image_targetdir(
-                arg_image=colorbake_image,
-                arg_directory=self.directory
-            )
-
-
-        # メタリックベイクを実行する
-        if baketype_metallic:
-            # メタリックベイクのテクスチャ名を作成する
-            metallictexture_name = texture_name + "_metallic"
-
-            # 指定オブジェクトのメタリックを画像テクスチャにベイクする
-            metallicbake_image = bake_metallic_texture.bake_metallic_texture(
-                arg_object=target_object,
-                arg_texturename=metallictexture_name,
-                arg_texturesize=channelmap_size,
-                arg_bakemargin=channelmap_bakemargin)
-
-            # 指定ディレクトリに作成した画像ファイルを出力する
-            save_replace_datas.save_image_targetdir(
-                arg_image=metallicbake_image,
-                arg_directory=self.directory
-            )
-
-
-        # オクルージョンベイクを実行する
-        if baketype_occlusion:
-            # オクルージョンベイクのテクスチャ名を作成する
-            occlusiontexture_name = texture_name + "_occlusion"
-
-            # 指定オブジェクトのアンビエントオクルージョンを画像テクスチャにベイクする
-            occlusionbake_image = bake_ambientocclusion_texture.bake_ambientocclusion_texture(
-                arg_object=target_object,
-                arg_texturename=occlusiontexture_name,
-                arg_texturesize=channelmap_size,
-                arg_bakemargin=channelmap_bakemargin,
-                arg_aofactor=bake_aofactor,
-                arg_distance=bake_aodistance)
-
-            # 指定ディレクトリに作成した画像ファイルを出力する
-            save_replace_datas.save_image_targetdir(
-                arg_image=occlusionbake_image,
-                arg_directory=self.directory
-            )
-
-
-        # エミッションベイクを実行する
-        if baketype_emission:
-            # エミッションベイクのテクスチャ名を作成する
-            emissiontexture_name = texture_name + "_emission"
-
-            # 指定オブジェクトのエミッションを画像テクスチャにベイクする
-            emissionbake_image = bake_whiteemission_texture.bake_whiteemission_texture(
-                arg_object=target_object,
-                arg_texturename=emissiontexture_name,
-                arg_texturesize=channelmap_size,
-                arg_bakemargin=channelmap_bakemargin)
-
-            # 指定ディレクトリに作成した画像ファイルを出力する
-            save_replace_datas.save_image_targetdir(
-                arg_image=emissionbake_image,
-                arg_directory=self.directory
-            )
-
-
-        # 滑らかさベイクを実行する
-        if baketype_smoothness:
-            # 滑らかさベイクのテクスチャ名を作成する
-            smoothnesstexture_name = texture_name + "_smoothness"
-
-            # 指定オブジェクトの滑らかさを画像テクスチャにベイクする
-            smoothnessbake_image = bake_smoothness_texture.bake_smoothness_texture(
-                arg_object=target_object,
-                arg_texturename=smoothnesstexture_name,
-                arg_texturesize=channelmap_size,
-                arg_bakemargin=channelmap_bakemargin)
-
-            # 指定ディレクトリに作成した画像ファイルを出力する
-            save_replace_datas.save_image_targetdir(
-                arg_image=smoothnessbake_image,
-                arg_directory=self.directory
-            )
-
-
-        # ノーマルベイクを実行する
-        if baketype_normal:
-            # ノーマルベイクのテクスチャ名を作成する
-            normaltexture_name = texture_name + "_normal"
-
-            # 指定オブジェクトのノーマルマップを画像テクスチャにベイクする
-            normalbake_image = bake_materialnormal_texture.bake_materialnormal_texture(
-                arg_object=target_object,
-                arg_texturename=normaltexture_name,
-                arg_texturesize=normalmap_size,
-                arg_bakemargin=normalmap_bakemargin)
-
-            # 指定ディレクトリに作成した画像ファイルを出力する(16ビット色深度)
-            save_replace_datas.save_image_targetdir(
-                arg_image=normalbake_image,
-                arg_directory=self.directory,
-                arg_colormode='RGBA',
-                arg_colordepth='16',
-                arg_compression=15
-            )
-
-
-        # カラーベイクの後処理を実行する
-        if baketype_color:
-            # 指定オブジェクトのマテリアルを作成テクスチャのシンプルなプリンシプルBSDFマテリアルのみとする
-            save_replace_datas.replace_material_textureBSDF(
-                arg_object=target_object,
-                arg_texture=colorbake_image
-            )
-
-
-        # 画像の参照と統一マテリアルを生成したプロジェクトを別名ファイルとして保存する
-        bpy.ops.wm.save_as_mainfile(filepath=self.filepath)
 
         return {'FINISHED'}
 
