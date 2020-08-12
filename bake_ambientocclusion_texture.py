@@ -2,7 +2,8 @@
 import bpy
 
 # 指定オブジェクトのアンビエントオクルージョンを画像テクスチャにベイクする
-def bake_ambientocclusion_texture(arg_object:bpy.types.Object,
+def bake_ambientocclusion_texture(
+  arg_object:bpy.types.Object,
   arg_texturename:str="BakeTexture",
   arg_texturesize:int=2048,
   arg_bakemargin:int=0,
@@ -198,7 +199,7 @@ def bake_ambientocclusion(arg_object:bpy.types.Object,
     # GPUの利用有無を確認する
     if arg_GPUuse == True:
         # 利用設定ならGPUの設定を行う
-        bpy.data.scenes["Scene"].cycles.device = 'GPU'
+        bpy.context.scene.cycles.device = 'GPU'
         # CUDAを選択する
         bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
         # デバイスの一覧を取得する
@@ -206,8 +207,13 @@ def bake_ambientocclusion(arg_object:bpy.types.Object,
             for device in devices:
                 # デバイスタイプがCUDAならば利用対象とする
                 if device.type == 'CUDA':
-                    print("利用可能なGPUを検出しました:" + device.name)
                     device.use = True
+
+    # render.bake の設定項目を予め設定する
+    bake_setting = bpy.context.scene.render.bake
+    
+    # [選択->アクティブ]のベイクを無効化する
+    bake_setting.use_selected_to_active = False
 
     # 現在のワールド参照を取得する
     context_world = bpy.context.scene.world

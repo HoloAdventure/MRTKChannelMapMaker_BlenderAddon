@@ -7,7 +7,9 @@ import bpy
 from . import accessor_control_MRTKstandard
 
 # 指定オブジェクトの全てのマテリアルのメタリック情報を画像テクスチャにベイクする
-def bake_metallic_texture(arg_object:bpy.types.Object,
+def bake_metallic_texture(
+  arg_object:bpy.types.Object,
+  arg_refobjects:list=[],
   arg_texturename:str="BakeTexture",
   arg_texturesize:int=2048,
   arg_bakemargin:int=0) -> bpy.types.Image:
@@ -15,6 +17,7 @@ def bake_metallic_texture(arg_object:bpy.types.Object,
 
     Args:
         arg_object (bpy.types.Object): 指定オブジェクト
+        arg_refobjects (list): ベイク参照元オブジェクトリスト. Defaults to [].
         arg_texturename (str, optional): 作成テクスチャ名. Defaults to "BakeTexture".
         arg_texturesize (int, optional): 作成テクスチャサイズ(px). Defaults to 2048.
         arg_bakemargin (int, optional): ベイク余白(px). Defaults to 0.
@@ -65,6 +68,7 @@ def bake_metallic_texture(arg_object:bpy.types.Object,
     # 指定オブジェクトの「粗さ」をベイクする
     bake_roughness_only(
         arg_object=arg_object,
+        arg_refobjects=arg_refobjects,
         arg_bakemargin=arg_bakemargin,
         arg_GPUuse=True
     )
@@ -175,19 +179,35 @@ def select_node_target(arg_material:bpy.types.Material, arg_node:bpy.types.Node)
 
 # 指定オブジェクトの粗さ情報のみをベイクする
 def bake_roughness_only(arg_object:bpy.types.Object,
-  arg_bakemargin:int=0, arg_GPUuse:bool=False):
+  arg_refobjects:list=[], arg_bakemargin:int=0, arg_GPUuse:bool=False):
     """指定オブジェクトのカラー情報のみをベイクする
 
     Args:
         arg_object (bpy.types.Object): 指定オブジェクト
+        arg_refobjects (list): ベイク参照元オブジェクトリスト. Defaults to [].
         arg_bakemargin (int, optional): ベイク余白. Defaults to 0.
         arg_GPUuse (bool, optional): GPU利用指定. Defaults to False.
     """
+
+    # [選択->アクティブ]のベイクフラグを作成する
+    selected_to_active = False
+
+    # 参照元オブジェクトが設定されているか確認する
+    if len(arg_refobjects) > 0:
+        # 参照元オブジェクトが設定されている場合は[選択->アクティブ]のベイクを実行する
+        selected_to_active = True
 
     # 全てのオブジェクトを非選択状態にする
     for obj in bpy.context.scene.objects:
         # 選択状態を解除する
         obj.select_set(False)
+
+    # [選択->アクティブ]のベイクか確認する
+    if selected_to_active == True:
+        # 参照元オブジェクトリストを走査する
+        for refobject in arg_refobjects:
+            # [選択->アクティブ]のベイクの場合、参照元オブジェクトを選択状態にする
+            refobject.select_set(True)
 
     # 指定オブジェクトを選択状態にする
     arg_object.select_set(True)
@@ -201,7 +221,7 @@ def bake_roughness_only(arg_object:bpy.types.Object,
     # GPUの利用有無を確認する
     if arg_GPUuse == True:
         # 利用設定ならGPUの設定を行う
-        bpy.data.scenes["Scene"].cycles.device = 'GPU'
+        bpy.context.scene.cycles.device = 'GPU'
         # CUDAを選択する
         bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
         # デバイスの一覧を取得する
@@ -209,8 +229,25 @@ def bake_roughness_only(arg_object:bpy.types.Object,
             for device in devices:
                 # デバイスタイプがCUDAならば利用対象とする
                 if device.type == 'CUDA':
-                    print("利用可能なGPUを検出しました:" + device.name)
                     device.use = True
+
+    # render.bake の設定項目を予め設定する
+    bake_setting = bpy.context.scene.render.bake
+
+    # サンプリング数を減らす
+    bpy.context.scene.cycles.samples = 1
+    bpy.context.scene.cycles.preview_samples = 1
+
+    # [選択->アクティブ]のベイクか確認する
+    if selected_to_active == True:
+        # [選択->アクティブ]のベイクを有効化する
+        bake_setting.use_selected_to_active = True
+
+        # レイの距離を 0.001 (近距離)に設定する
+        bake_setting.cage_extrusion = 0.01
+    else:
+        # [選択->アクティブ]のベイクを無効化する
+        bake_setting.use_selected_to_active = False
 
     # 「粗さ」タイプのベイクを実行する
     # ベイクの種類

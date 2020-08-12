@@ -10,7 +10,7 @@ from . import UI_operations
 bl_info = {
     "name": "HoloMon MRTK ChannelMap Maker Addon",   # プラグイン名
     "author": "HoloMon",                             # 制作者名
-    "version": (1, 6),                               # バージョン
+    "version": (1, 7),                               # バージョン
     "blender": (2, 80, 0),                           # 動作可能なBlenderバージョン
     "support": "TESTING",                            # サポートレベル
     "category": "Properties",                        # カテゴリ名
@@ -166,6 +166,11 @@ class HOLOMON_PT_addon_mrtk_channelmap_maker(Panel):
         bakemargin_row = draw_layout.row()
         # ベイク余白指定用のカスタムプロパティを配置する
         bakemargin_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_bakemargin")
+
+        # 要素行を作成する
+        baketo_newsmartuv_row = draw_layout.row()
+        # 新規スマートUV作成実行用のカスタムプロパティを配置する
+        baketo_newsmartuv_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_baketo_newsmartuv")
 
         # 要素行を作成する
         button_row = draw_layout.row()
@@ -523,6 +528,10 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
         normalmap_bakemargin = int(normalmap_size / int(colortexture_size / bake_margin))
 
 
+        # カスタムプロパティから新規スマートUV作成実行指定を取得する
+        baketo_newsmartuv = context.scene.holomon_mrtk_channelmap_maker.prop_baketo_newsmartuv
+
+
         # UIの設定から各種実行ベイクの情報を作成する
         # カラーベイクの情報を作成する
         color_BakeProperties = UI_operations.BakeProperties(
@@ -577,9 +586,10 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
         
         # チャネルマップ作成を実行する
         error_message = UI_operations.UI_mrtk_channelmap_maker(
-            arg_tobake_object=target_object,
+            arg_target_object=target_object,
             arg_export_dir=self.directory,
             arg_export_filepath=self.filepath,
+            arg_baketo_newsmartuv=baketo_newsmartuv,
             arg_colorbake_prop=color_BakeProperties,
             arg_metallicbake_prop=metallic_BakeProperties,
             arg_smoothnessbake_prop=smoothness_BakeProperties,
@@ -739,8 +749,8 @@ class HOLOMON_addon_mrtk_channelmap_maker_properties(PropertyGroup):
     )
     
     # シーン上のパネルに表示する新規スマートUV作成実行用のカスタムプロパティを定義する
-    prop_baketo_smartuv: BoolProperty(
-        name = "Bake To SmartUV",     # プロパティ名
+    prop_baketo_newsmartuv: BoolProperty(
+        name = "Bake To New SmartUV", # プロパティ名
         default=False,                # デフォルト値
         description = "",             # 説明文
     )

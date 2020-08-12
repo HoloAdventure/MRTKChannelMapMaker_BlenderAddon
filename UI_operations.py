@@ -15,6 +15,8 @@ if "bpy" in locals():
         importlib.reload(bake_smoothness_texture)
     if "bake_materialnormal_texture" in locals():
         importlib.reload(bake_materialnormal_texture)
+    if "control_object" in locals():
+        importlib.reload(control_object)
     if "control_uvlayer" in locals():
         importlib.reload(control_uvlayer)
     if "save_replace_datas" in locals():
@@ -29,6 +31,7 @@ from . import bake_ambientocclusion_texture
 from . import bake_whiteemission_texture
 from . import bake_smoothness_texture
 from . import bake_materialnormal_texture
+from . import control_object
 from . import control_uvlayer
 from . import save_replace_datas
 from . import accessor_control_MRTKstandard
@@ -118,9 +121,10 @@ def UI_mrtk_material_maker(arg_object:bpy.types.Object, arg_materialname:str) ->
 
 # チャネルマップ作成実行ボタンの処理を実行する
 def UI_mrtk_channelmap_maker(
-  arg_tobake_object:bpy.types.Object,
+  arg_target_object:bpy.types.Object,
   arg_export_dir:str,
   arg_export_filepath:str,
+  arg_baketo_newsmartuv:bool,
   arg_colorbake_prop:BakeProperties,
   arg_metallicbake_prop:BakeProperties,
   arg_smoothnessbake_prop:BakeProperties,
@@ -135,20 +139,59 @@ def UI_mrtk_channelmap_maker(
     """
 
     # 対象のオブジェクトのマテリアルが全てMRTKStandardノードグループを使用したマテリアルかチェックする
-    all_MRTKstandard = accessor_control_MRTKstandard.check_object_materials(arg_object=arg_tobake_object)
+    all_MRTKstandard = accessor_control_MRTKstandard.check_object_materials(arg_object=arg_target_object)
 
     # マテリアルが全てMRTKStandardノードグループか確認する
     if all_MRTKstandard == False:
         # マテリアルが全てMRTKStandardノードグループに設定されていない場合はエラーメッセージを表示する
         return "Object : All materials must be MRTK Standard."
 
-    # アクティブなUVマップレイヤーが存在するか確認する
-    # 存在しない場合は作成する
-    active_uvlayer = control_uvlayer.get_uvlayer(arg_object=arg_tobake_object)
-    # UVマップレイヤーの取得、作成に失敗したか確認する
-    if active_uvlayer == None:
-        # UVマップレイヤーの取得、作成に失敗した場合はエラーメッセージを表示する
-        return "Object : missing UVmap."
+    # ベイク時の参照先オブジェクトと参照元オブジェクト用の変数を初期化する
+    tobake_object = None
+    frombake_objectlist = []
+
+    # 新しいSmartUVへの展開が有効か確認する
+    if arg_baketo_newsmartuv == True:
+        # 対象オブジェクトを複製する
+        duplicate_object = control_object.duplicate_object_target(arg_object=arg_target_object)
+
+        # 複製元オブジェクトの名前を取得する
+        base_name = arg_target_object.name
+
+        # 複製元オブジェクトの名前を変更する
+        arg_target_object.name = base_name + "_base"
+
+        # 複製オブジェクトに複製元オブジェクトの名前を設定する
+        duplicate_object.name = base_name
+
+        # 複製オブジェクトのUVマップレイヤーを全て削除する
+        control_uvlayer.delete_uvlayer_all(arg_object=duplicate_object)
+
+        # 複製オブジェクトにスマートUV展開でUVマップレイヤーを作成する
+        active_uvlayer = control_uvlayer.get_uvlayer(arg_object=duplicate_object)
+
+        # UVマップレイヤーの取得、作成に失敗したか確認する
+        if active_uvlayer == None:
+            # UVマップレイヤーの取得、作成に失敗した場合はエラーメッセージを表示する
+            return "Object : missing UVmap."
+
+        # ベイク時の参照先オブジェクトに複製オブジェクトを指定する
+        tobake_object = duplicate_object
+
+        # 参照元オブジェクトに複製元オブジェクトを指定する
+        frombake_objectlist.append(arg_target_object)
+    else:
+        # アクティブなUVマップレイヤーが存在するか確認する
+        # 存在しない場合は作成する
+        active_uvlayer = control_uvlayer.get_uvlayer(arg_object=arg_target_object)
+
+        # UVマップレイヤーの取得、作成に失敗したか確認する
+        if active_uvlayer == None:
+            # UVマップレイヤーの取得、作成に失敗した場合はエラーメッセージを表示する
+            return "Object : missing UVmap."
+
+        # ベイク時の参照先オブジェクトに受領オブジェクトを指定する
+        tobake_object = arg_target_object
 
 
     # 作成した各テクスチャの参照を保持する
@@ -164,7 +207,8 @@ def UI_mrtk_channelmap_maker(
     if arg_colorbake_prop.execute_flg == True:
         # 指定オブジェクトの全てのマテリアルカラーを画像テクスチャにベイクする
         colorbake_image = bake_materialcolor_texture.bake_materialcolor_texture(
-            arg_object=arg_tobake_object,
+            arg_object=tobake_object,
+            arg_refobjects=frombake_objectlist,
             arg_texturename=arg_colorbake_prop.texture_name,
             arg_texturesize=arg_colorbake_prop.texture_size,
             arg_bakemargin=arg_colorbake_prop.bake_margin
@@ -181,7 +225,8 @@ def UI_mrtk_channelmap_maker(
     if arg_metallicbake_prop.execute_flg == True:
         # 指定オブジェクトのメタリックを画像テクスチャにベイクする
         metallicbake_image = bake_metallic_texture.bake_metallic_texture(
-            arg_object=arg_tobake_object,
+            arg_object=tobake_object,
+            arg_refobjects=frombake_objectlist,
             arg_texturename=arg_metallicbake_prop.texture_name,
             arg_texturesize=arg_metallicbake_prop.texture_size,
             arg_bakemargin=arg_metallicbake_prop.bake_margin
@@ -198,7 +243,8 @@ def UI_mrtk_channelmap_maker(
     if arg_smoothnessbake_prop.execute_flg == True:
         # 指定オブジェクトの滑らかさを画像テクスチャにベイクする
         smoothnessbake_image = bake_smoothness_texture.bake_smoothness_texture(
-            arg_object=arg_tobake_object,
+            arg_object=tobake_object,
+            arg_refobjects=frombake_objectlist,
             arg_texturename=arg_smoothnessbake_prop.texture_name,
             arg_texturesize=arg_smoothnessbake_prop.texture_size,
             arg_bakemargin=arg_smoothnessbake_prop.bake_margin
@@ -215,7 +261,8 @@ def UI_mrtk_channelmap_maker(
     if arg_emissionbake_prop.execute_flg == True:
         # 指定オブジェクトのエミッションを画像テクスチャにベイクする
         emissionbake_image = bake_whiteemission_texture.bake_whiteemission_texture(
-            arg_object=arg_tobake_object,
+            arg_object=tobake_object,
+            arg_refobjects=frombake_objectlist,
             arg_texturename=arg_emissionbake_prop.texture_name,
             arg_texturesize=arg_emissionbake_prop.texture_size,
             arg_bakemargin=arg_emissionbake_prop.bake_margin
@@ -232,7 +279,7 @@ def UI_mrtk_channelmap_maker(
     if arg_occlusionbake_prop.execute_flg == True:
         # 指定オブジェクトのアンビエントオクルージョンを画像テクスチャにベイクする
         occlusionbake_image = bake_ambientocclusion_texture.bake_ambientocclusion_texture(
-            arg_object=arg_tobake_object,
+            arg_object=tobake_object,
             arg_texturename=arg_occlusionbake_prop.texture_name,
             arg_texturesize=arg_occlusionbake_prop.texture_size,
             arg_bakemargin=arg_occlusionbake_prop.bake_margin,
@@ -251,7 +298,8 @@ def UI_mrtk_channelmap_maker(
     if arg_normalbake_prop.execute_flg:
         # 指定オブジェクトのノーマルマップを画像テクスチャにベイクする
         normalbake_image = bake_materialnormal_texture.bake_materialnormal_texture(
-            arg_object=arg_tobake_object,
+            arg_object=tobake_object,
+            arg_refobjects=frombake_objectlist,
             arg_texturename=arg_normalbake_prop.texture_name,
             arg_texturesize=arg_normalbake_prop.texture_size,
             arg_bakemargin=arg_normalbake_prop.bake_margin
@@ -271,9 +319,17 @@ def UI_mrtk_channelmap_maker(
     if arg_colorbake_prop.execute_flg == True:
         # 指定オブジェクトのマテリアルを作成テクスチャのシンプルなプリンシプルBSDFマテリアルのみとする
         save_replace_datas.replace_material_textureBSDF(
-            arg_object=arg_tobake_object,
+            arg_object=tobake_object,
             arg_texture=colorbake_image
         )
+
+
+    # 新しいSmartUVへの展開が有効か確認する
+    if arg_baketo_newsmartuv == True:
+        # 有効であれば複製元のオブジェクトを走査する
+        for frombake_object in frombake_objectlist:
+            # 複製元のオブジェクトを削除する
+            bpy.data.objects.remove(frombake_object)
 
 
     # 画像の参照と統一マテリアルを生成したプロジェクトを別名ファイルとして保存する

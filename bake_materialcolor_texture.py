@@ -7,8 +7,9 @@ import bpy
 from . import accessor_control_MRTKstandard
 
 # 指定オブジェクトの全てのマテリアルカラーを画像テクスチャにベイクする
-def bake_materialcolor_texture(arg_object:bpy.types.Object,
-  arg_refobjects:list=(), 
+def bake_materialcolor_texture(
+  arg_object:bpy.types.Object,
+  arg_refobjects:list=[], 
   arg_texturename:str="BakeTexture",
   arg_texturesize:int=2048,
   arg_bakemargin:int=0) -> bpy.types.Image:
@@ -16,7 +17,7 @@ def bake_materialcolor_texture(arg_object:bpy.types.Object,
 
     Args:
         arg_object (bpy.types.Object): 指定オブジェクト
-        arg_refobjects (list): ベイク参照元オブジェクトリスト
+        arg_refobjects (list): ベイク参照元オブジェクトリスト. Defaults to [].
         arg_texturename (str, optional): 作成テクスチャ名. Defaults to "BakeTexture".
         arg_texturesize (int, optional): 作成テクスチャサイズ(px). Defaults to 2048.
         arg_bakemargin (int, optional): ベイク余白(px). Defaults to 0.
@@ -76,6 +77,7 @@ def bake_materialcolor_texture(arg_object:bpy.types.Object,
     # 指定オブジェクトの「カラー」をベイクする
     bake_diffuse_coloronly(
         arg_object=arg_object,
+        arg_refobjects=arg_refobjects,
         arg_bakemargin=arg_bakemargin,
         arg_GPUuse=True
     )
@@ -195,12 +197,12 @@ def select_node_target(arg_material:bpy.types.Material, arg_node:bpy.types.Node)
 
 # 指定オブジェクトのカラー情報のみをベイクする
 def bake_diffuse_coloronly(arg_object:bpy.types.Object,
-  arg_refobjects:list=(), arg_bakemargin:int=0, arg_GPUuse:bool=False):
+  arg_refobjects:list=[], arg_bakemargin:int=0, arg_GPUuse:bool=False):
     """指定オブジェクトのカラー情報のみをベイクする
 
     Args:
         arg_object (bpy.types.Object): 指定オブジェクト
-        arg_refobjects (list): ベイク参照元オブジェクトリスト
+        arg_refobjects (list): ベイク参照元オブジェクトリスト. Defaults to [].
         arg_bakemargin (int, optional): ベイク余白. Defaults to 0.
         arg_GPUuse (bool, optional): GPU利用指定. Defaults to False.
     """
@@ -270,6 +272,9 @@ def bake_diffuse_coloronly(arg_object:bpy.types.Object,
 
         # レイの距離を 0.001 (近距離)に設定する
         bake_setting.cage_extrusion = 0.01
+    else:
+        # [選択->アクティブ]のベイクを無効化する
+        bake_setting.use_selected_to_active = False
 
     # ディフューズタイプのベイクを実行する
     # ベイクの種類

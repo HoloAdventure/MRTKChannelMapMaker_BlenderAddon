@@ -81,6 +81,11 @@ def delete_uvlayer_all(arg_object:bpy.types.Object) -> bool:
     # (https://docs.blender.org/api/current/bpy.types.UVLoopLayers.html)
     uv_layers = meshdata.uv_layers
 
+    # UVマップレイヤーを全て走査する
+    for uv_layer in uv_layers:
+        # UVマップレイヤーを全て削除する
+        uv_layers.remove(uv_layer)
+    
     return
 
 # スマートUV展開を実行する(デフォルト設定)
