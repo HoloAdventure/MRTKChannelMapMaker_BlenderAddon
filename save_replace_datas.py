@@ -145,6 +145,9 @@ def save_image_targetdir(arg_image:bpy.types.Image, arg_directory:str,
     # ファイルフォーマットをPNGに設定する
     arg_image.file_format = 'PNG'
 
+    # 参照パスを保存するため、一度保存を行う
+    arg_image.save()
+
     # レンダー色空間で保存するためのシーンを取得する
     # (https://docs.blender.org/api/current/bpy.types.Scene.html)
     render_scene = bpy.context.scene

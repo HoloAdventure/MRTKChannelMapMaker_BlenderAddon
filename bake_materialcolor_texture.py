@@ -237,7 +237,7 @@ def bake_diffuse_coloronly(arg_object:bpy.types.Object,
     # GPUの利用有無を確認する
     if arg_GPUuse == True:
         # 利用設定ならGPUの設定を行う
-        bpy.data.scenes["Scene"].cycles.device = 'GPU'
+        bpy.context.scene.cycles.device = 'GPU'
         # CUDAを選択する
         bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
         # デバイスの一覧を取得する
@@ -245,7 +245,6 @@ def bake_diffuse_coloronly(arg_object:bpy.types.Object,
             for device in devices:
                 # デバイスタイプがCUDAならば利用対象とする
                 if device.type == 'CUDA':
-                    print("利用可能なGPUを検出しました:" + device.name)
                     device.use = True
 
     # render.bake の設定項目を予め設定する
@@ -260,13 +259,17 @@ def bake_diffuse_coloronly(arg_object:bpy.types.Object,
     # ベイクの影響からカラーを有効化する
     bake_setting.use_pass_color = True
 
+    # サンプリング数を減らす
+    bpy.context.scene.cycles.samples = 1
+    bpy.context.scene.cycles.preview_samples = 1
+
     # [選択->アクティブ]のベイクか確認する
     if selected_to_active == True:
         # [選択->アクティブ]のベイクを有効化する
         bake_setting.use_selected_to_active = True
 
         # レイの距離を 0.001 (近距離)に設定する
-        bake_setting.cage_extrusion = 0.001
+        bake_setting.cage_extrusion = 0.01
 
     # ディフューズタイプのベイクを実行する
     # ベイクの種類
