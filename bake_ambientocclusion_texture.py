@@ -169,14 +169,16 @@ def select_node_target(arg_material:bpy.types.Material, arg_node:bpy.types.Node)
     return
 
 # 指定オブジェクトのアンビエントオクルージョンをベイクする
-def bake_ambientocclusion(arg_object:bpy.types.Object,
-  arg_bakemargin:int=0, arg_GPUuse:bool=False,
+def bake_ambientocclusion(
+  arg_object:bpy.types.Object, arg_bakemargin:int=0, 
+  arg_onesample:bool=False, arg_GPUuse:bool=False,
   arg_aofactor:float=1.0, arg_distance:float=10.0):
     """指定オブジェクトのアンビエントオクルージョンをベイクする
 
     Args:
         arg_object (bpy.types.Object): 指定オブジェクト
         arg_bakemargin (int, optional): ベイク余白. Defaults to 0.
+        arg_onesample (bool, optional): 簡易サンプリング指定. Defaults to False.
         arg_GPUuse (bool, optional): GPU利用指定. Defaults to False.
         arg_aofactor (float, optional): AO係数. Defaults to 1.0.
         arg_distance (float, optional): AO距離. Defaults to 10.0.
@@ -227,12 +229,26 @@ def bake_ambientocclusion(arg_object:bpy.types.Object,
     # 距離の設定を行う
     context_world.light_settings.distance = arg_distance
 
+    # 現在のサンプリング数を記録する
+    current_samples = bpy.context.scene.cycles.samples
+    current_preview_samples = bpy.context.scene.cycles.preview_samples
+
+    # 簡易サンプリングが有効かチェックする
+    if arg_onesample == True:
+        # サンプリング数を減らす
+        bpy.context.scene.cycles.samples = 1
+        bpy.context.scene.cycles.preview_samples = 1
+
     # ディフューズタイプのベイクを実行する
     # ベイクの種類
     # ('COMBINED', 'AO', 'SHADOW', 'NORMAL', 'UV', 'ROUGHNESS',
     # 'EMIT', 'ENVIRONMENT', 'DIFFUSE', 'GLOSSY', 'TRANSMISSION')
     # (render.bake 以外の設定は引数で指定する必要あり)
     bpy.ops.object.bake(type='AO', margin=arg_bakemargin)
+
+    # サンプリング数を元に戻す
+    bpy.context.scene.cycles.samples = current_samples
+    bpy.context.scene.cycles.preview_samples = current_preview_samples
 
     return
 

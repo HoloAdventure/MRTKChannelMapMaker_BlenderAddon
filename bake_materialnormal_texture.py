@@ -96,7 +96,7 @@ def make_new_image(arg_texturename:str="BakeTexture",
         bpy.types.Image: 作成画像の参照
     """
 
-    # 新規画像を作成する(32ビットFloat設定)
+    # 新規画像を作成する(32ビットFloat設定(float_buffer))
     newimage = bpy.data.images.new(
         name=arg_texturename,
         width=arg_texturesize,
@@ -169,13 +169,15 @@ def select_node_target(arg_material:bpy.types.Material, arg_node:bpy.types.Node)
 
 # 指定オブジェクトのノーマルマップをベイクする
 def bake_normal_only(arg_object:bpy.types.Object,
-  arg_refobjects:list=[], arg_bakemargin:int=0, arg_GPUuse:bool=False):
+  arg_refobjects:list=[], arg_bakemargin:int=0,
+  arg_onesample:bool=False, arg_GPUuse:bool=False):
     """指定オブジェクトのノーマルマップをベイクする
 
     Args:
         arg_object (bpy.types.Object): 指定オブジェクト
         arg_refobjects (list): ベイク参照元オブジェクトリスト. Defaults to [].
         arg_bakemargin (int, optional): ベイク余白. Defaults to 0.
+        arg_onesample (bool, optional): 簡易サンプリング指定. Defaults to False.
         arg_GPUuse (bool, optional): GPU利用指定. Defaults to False.
     """
 
@@ -227,10 +229,6 @@ def bake_normal_only(arg_object:bpy.types.Object,
     # 影響の[スペース]を[タンジェント]に指定する
     bake_setting.normal_space = 'TANGENT'
 
-    # サンプリング数を減らす
-    bpy.context.scene.cycles.samples = 1
-    bpy.context.scene.cycles.preview_samples = 1
-
     # [選択->アクティブ]のベイクか確認する
     if selected_to_active == True:
         # [選択->アクティブ]のベイクを有効化する
@@ -242,12 +240,26 @@ def bake_normal_only(arg_object:bpy.types.Object,
         # [選択->アクティブ]のベイクを無効化する
         bake_setting.use_selected_to_active = False
 
+    # 現在のサンプリング数を記録する
+    current_samples = bpy.context.scene.cycles.samples
+    current_preview_samples = bpy.context.scene.cycles.preview_samples
+
+    # 簡易サンプリングが有効かチェックする
+    if arg_onesample == True:
+        # サンプリング数を減らす
+        bpy.context.scene.cycles.samples = 1
+        bpy.context.scene.cycles.preview_samples = 1
+
     # 法線タイプのベイクを実行する
     # ベイクの種類
     # ('COMBINED', 'AO', 'SHADOW', 'NORMAL', 'UV', 'ROUGHNESS',
     # 'EMIT', 'ENVIRONMENT', 'DIFFUSE', 'GLOSSY', 'TRANSMISSION')
     # (render.bake 以外の設定は引数で指定する必要あり)
     bpy.ops.object.bake(type='NORMAL', margin=arg_bakemargin)
+
+    # サンプリング数を元に戻す
+    bpy.context.scene.cycles.samples = current_samples
+    bpy.context.scene.cycles.preview_samples = current_preview_samples
 
     return
 
