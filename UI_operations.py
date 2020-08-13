@@ -124,7 +124,7 @@ def UI_mrtk_channelmap_maker(
   arg_target_object:bpy.types.Object,
   arg_export_dir:str,
   arg_export_filepath:str,
-  arg_baketo_newsmartuv:bool,
+  arg_baketo_newuv:bool,
   arg_colorbake_prop:BakeProperties,
   arg_metallicbake_prop:BakeProperties,
   arg_smoothnessbake_prop:BakeProperties,
@@ -150,8 +150,8 @@ def UI_mrtk_channelmap_maker(
     tobake_object = None
     frombake_objectlist = []
 
-    # 新しいSmartUVへの展開が有効か確認する
-    if arg_baketo_newsmartuv == True:
+    # 新しいUVへの展開が有効か確認する
+    if arg_baketo_newuv == True:
         # 対象オブジェクトを複製する
         duplicate_object = control_object.duplicate_object_target(arg_object=arg_target_object)
 
@@ -167,8 +167,8 @@ def UI_mrtk_channelmap_maker(
         # 複製オブジェクトのUVマップレイヤーを全て削除する
         control_uvlayer.delete_uvlayer_all(arg_object=duplicate_object)
 
-        # 複製オブジェクトにスマートUV展開でUVマップレイヤーを作成する
-        active_uvlayer = control_uvlayer.get_uvlayer(arg_object=duplicate_object)
+        # 複製オブジェクトに通常のUV展開でUVマップレイヤーを作成する
+        active_uvlayer = control_uvlayer.project_uv_normal(arg_object=duplicate_object)
 
         # UVマップレイヤーの取得、作成に失敗したか確認する
         if active_uvlayer == None:
@@ -324,8 +324,8 @@ def UI_mrtk_channelmap_maker(
         )
 
 
-    # 新しいSmartUVへの展開が有効か確認する
-    if arg_baketo_newsmartuv == True:
+    # 新しいUVへの展開が有効か確認する
+    if arg_baketo_newuv == True:
         # 有効であれば複製元のオブジェクトを走査する
         for frombake_object in frombake_objectlist:
             # 複製元のオブジェクトを削除する

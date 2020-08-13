@@ -10,7 +10,7 @@ from . import UI_operations
 bl_info = {
     "name": "HoloMon MRTK ChannelMap Maker Addon",   # プラグイン名
     "author": "HoloMon",                             # 制作者名
-    "version": (1, 8),                               # バージョン
+    "version": (1, 9),                               # バージョン
     "blender": (2, 80, 0),                           # 動作可能なBlenderバージョン
     "support": "TESTING",                            # サポートレベル
     "category": "Properties",                        # カテゴリ名
@@ -168,9 +168,9 @@ class HOLOMON_PT_addon_mrtk_channelmap_maker(Panel):
         bakemargin_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_bakemargin")
 
         # 要素行を作成する
-        baketo_newsmartuv_row = draw_layout.row()
+        baketo_newuv_row = draw_layout.row()
         # 新規スマートUV作成実行用のカスタムプロパティを配置する
-        baketo_newsmartuv_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_baketo_newsmartuv")
+        baketo_newuv_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_baketo_newuv")
 
         # 要素行を作成する
         button_row = draw_layout.row()
@@ -529,7 +529,7 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
 
 
         # カスタムプロパティから新規スマートUV作成実行指定を取得する
-        baketo_newsmartuv = context.scene.holomon_mrtk_channelmap_maker.prop_baketo_newsmartuv
+        baketo_newuv = context.scene.holomon_mrtk_channelmap_maker.prop_baketo_newuv
 
 
         # UIの設定から各種実行ベイクの情報を作成する
@@ -589,7 +589,7 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
             arg_target_object=target_object,
             arg_export_dir=self.directory,
             arg_export_filepath=self.filepath,
-            arg_baketo_newsmartuv=baketo_newsmartuv,
+            arg_baketo_newuv=baketo_newuv,
             arg_colorbake_prop=color_BakeProperties,
             arg_metallicbake_prop=metallic_BakeProperties,
             arg_smoothnessbake_prop=smoothness_BakeProperties,
@@ -749,8 +749,8 @@ class HOLOMON_addon_mrtk_channelmap_maker_properties(PropertyGroup):
     )
     
     # シーン上のパネルに表示する新規スマートUV作成実行用のカスタムプロパティを定義する
-    prop_baketo_newsmartuv: BoolProperty(
-        name = "Bake To New SmartUV", # プロパティ名
+    prop_baketo_newuv: BoolProperty(
+        name = "Bake To New UV",      # プロパティ名
         default=False,                # デフォルト値
         description = "",             # 説明文
     )

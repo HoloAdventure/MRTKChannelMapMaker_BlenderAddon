@@ -88,9 +88,49 @@ def delete_uvlayer_all(arg_object:bpy.types.Object) -> bool:
     
     return
 
-# スマートUV展開を実行する(デフォルト設定)
+# 通常のUV展開を実行する
+def project_uv_normal(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
+    """通常のUV展開を実行する
+
+    Args:
+        arg_object (bpy.types.Object): 指定オブジェクト
+
+    Returns:
+        bpy.types.MeshUVLoopLayer: 作成UVマップレイヤーの参照
+    """
+
+    # 不要なオブジェクトを選択しないように
+    # 全てのオブジェクトを走査する
+    for ob in bpy.context.scene.objects:
+        # 非選択状態に設定する
+        ob.select_set(False)
+    
+    # オブジェクトを選択状態にする
+    arg_object.select_set(True)
+ 
+    # 編集モードに移行する
+    bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+    
+    # 頂点を全選択した状態とする
+    bpy.ops.mesh.select_all(action='SELECT')
+    
+    # 通常のUV展開を実行する
+    # 方式：アングルベース,穴を埋める：True,アスペクト比の補正：True,
+    # 細分化モディファイアを使用：False,余白:0.1
+    bpy.ops.uv.unwrap(method='ANGLE_BASED', fill_holes=True,
+      correct_aspect=True, use_subsurf_data=False, margin=0.1)
+    
+    # オブジェクトモードに移行する
+    bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+    
+    # 対象オブジェクトに追加されたUVマップを取得する
+    active_uvlayer = arg_object.data.uv_layers[-1]
+    
+    return active_uvlayer
+
+# スマートUV展開を実行する
 def project_uv_smart(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
-    """スマートUV展開を実行する(デフォルト設定)
+    """スマートUV展開を実行する
 
     Args:
         arg_object (bpy.types.Object): 指定オブジェクト
