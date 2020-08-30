@@ -220,7 +220,6 @@ def UI_mrtk_channelmap_maker(
             arg_directory=arg_export_dir
         )
 
-
     # メタリックベイクを実行する
     if arg_metallicbake_prop.execute_flg == True:
         # 指定オブジェクトのメタリックを画像テクスチャにベイクする
