@@ -15,7 +15,7 @@ def get_uvlayer(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
     """
     
     # UVマップが存在するか確認する
-    ret_uvlayer = get_uvlayer_active(arg_object=arg_object)
+    ret_uvlayer = get_uvlayer_renderactive(arg_object=arg_object)
     if ret_uvlayer == None:
         # UVマップが存在しない場合はスマートUV展開を実行する
         ret_uvlayer = project_uv_smart(arg_object=arg_object)
@@ -23,7 +23,7 @@ def get_uvlayer(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
     return ret_uvlayer
 
 # レンダリング時に有効なUVマップレイヤーを取得する
-def get_uvlayer_active(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
+def get_uvlayer_renderactive(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
     """レンダリング時に有効なUVマップレイヤーを取得する
 
     Args:
@@ -48,10 +48,78 @@ def get_uvlayer_active(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer
     # (https://docs.blender.org/api/current/bpy.types.UVLoopLayers.html)
     uv_layers = meshdata.uv_layers
 
-    # アクティブなUVマップを取得する
-    # UVマップレイヤー操作のマニュアル
-    # (https://docs.blender.org/api/current/bpy.types.MeshUVLoopLayer.html)
-    active_uvlayer = uv_layers.active
+    # レンダー設定がアクティブなUVマップを取得する
+    active_uvlayer = None
+
+    # UVマップレイヤーを全て走査する
+    for uv_layer in uv_layers:
+        # レンダー設定の有効無効を判定する
+        # UVマップレイヤー操作のマニュアル
+        # (https://docs.blender.org/api/current/bpy.types.MeshUVLoopLayer.html)
+        if uv_layer.active_render:
+            # レンダー設定がアクティブなUVマップを取得する
+            active_uvlayer = uv_layer
+
+    return active_uvlayer
+
+# 指定のオブジェクトの指定UVマップレイヤーのレンダー設定をアクティブにする
+def set_uvlayer_renderactive(arg_object:bpy.types.Object,
+  arg_uvlayername:str) -> bpy.types.MeshUVLoopLayer:
+    """指定のオブジェクトの指定UVマップレイヤーのレンダー設定をアクティブにする
+
+    Args:
+        arg_object (bpy.types.Object): 指定オブジェクト
+        arg_uvlayername (str): 指定UVマップレイヤー名
+
+    Returns:
+        bpy.types.MeshUVLoopLayer: UVマップレイヤーの参照
+    """
+
+    # 指定オブジェクトが存在するか確認する
+    if arg_object == None:
+        # 指定オブジェクトが存在しない場合は処理しない
+        return None
+    
+    # オブジェクトがメッシュであるか確認する
+    if arg_object.type != 'MESH':
+        # 指定オブジェクトがメッシュでない場合は処理しない
+        return None
+
+    # 対象オブジェクトのメッシュデータを取得する
+    # メッシュデータ操作のマニュアル
+    # (https://docs.blender.org/api/current/bpy.types.Mesh.html)
+    meshdata = arg_object.data
+
+    # UVマップレイヤーのリストを取得する
+    # UVマップレイヤーのリスト操作のマニュアル
+    # (https://docs.blender.org/api/current/bpy.types.UVLoopLayers.html)
+    uv_layers = meshdata.uv_layers
+
+    # UVマップレイヤーを取得する
+    # (get関数は対象が存在しない場合 None が返る)
+    target_uvlayer = uv_layers.get(arg_uvlayername)
+
+    # 指定UVマップレイヤーが存在するか確認する
+    if target_uvlayer == None:
+        # 指定UVマップレイヤーが存在しない場合は処理しない
+        return None
+    
+    # レンダー設定がアクティブなUVマップを取得する
+    active_uvlayer = None
+
+    # UVマップレイヤーを走査する
+    for uv_layer in uv_layers:
+        # 指定のUVマップレイヤーか確認する
+        # UVマップレイヤー操作のマニュアル
+        # (https://docs.blender.org/api/current/bpy.types.MeshUVLoopLayer.html)
+        if uv_layer == target_uvlayer:
+            # 指定のUVマップレイヤーであればレンダー設定をアクティブにする
+            uv_layer.active_render = True
+            # レンダー設定がアクティブなUVマップを取得する
+            active_uvlayer = uv_layer
+        else:
+            # 指定のUVマップレイヤーでなければレンダー設定を非アクティブにする
+            uv_layer.active_render = False
 
     return active_uvlayer
 
