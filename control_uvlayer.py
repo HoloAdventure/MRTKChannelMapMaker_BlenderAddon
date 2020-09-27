@@ -1,27 +1,48 @@
 # 各種ライブラリインポート
 import bpy
 
-# レンダリング時に有効なUVマップレイヤーを取得する
-# 既存のUVマップレイヤーがない場合はスマートUV展開で作成する
-def get_uvlayer(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
-    """レンダリング時に有効なUVマップレイヤーを取得する
-    既存のUVマップレイヤーがない場合はスマートUV展開で作成する
+# レンダリング時有効なUVマップレイヤーを作成/設定する
+def setting_uvlayer_renderactive(arg_object:bpy.types.Object,
+  arg_uvlayername:str) -> bpy.types.MeshUVLoopLayer:
+    """レンダリング時有効なUVマップレイヤーを作成/設定する
 
     Args:
         arg_object (bpy.types.Object): 指定オブジェクト
+        arg_uvlayername (str): 指定UVマップレイヤー名
 
     Returns:
         bpy.types.MeshUVLoopLayer: UVマップレイヤーの参照
     """
+
+    # 指定オブジェクトが存在するか確認する
+    if arg_object == None:
+        # 指定オブジェクトが存在しない場合は処理しない
+        return None
+    
+    # オブジェクトがメッシュであるか確認する
+    if arg_object.type != 'MESH':
+        # 指定オブジェクトがメッシュでない場合は処理しない
+        return None
+
+    # レンダー設定がアクティブなUVマップを取得する
+    active_uvlayer = None
     
     # UVマップが存在するか確認する
-    ret_uvlayer = get_uvlayer_renderactive(arg_object=arg_object)
-    if ret_uvlayer == None:
+    active_uvlayer = get_uvlayer_renderactive(arg_object=arg_object)
+    if active_uvlayer == None:
         # UVマップが存在しない場合はスマートUV展開を実行する
-        ret_uvlayer = project_uv_smart(arg_object=arg_object)
-    
-    return ret_uvlayer
+        active_uvlayer = project_uv_smart(arg_object=arg_object)
 
+    # 入力UVマップの指定がされているか確認する
+    if len(arg_uvlayername) > 0:
+        # 指定がされている場合は対象のUVマップレイヤーのレンダー設定をアクティブにする
+        active_uvlayer = set_uvlayer_renderactive(
+            arg_object=arg_object,
+            arg_uvlayername=arg_uvlayername
+        )
+
+    return active_uvlayer
+    
 # レンダリング時に有効なUVマップレイヤーを取得する
 def get_uvlayer_renderactive(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
     """レンダリング時に有効なUVマップレイヤーを取得する
@@ -150,11 +171,56 @@ def delete_uvlayer_all(arg_object:bpy.types.Object) -> bool:
     uv_layers = meshdata.uv_layers
 
     # UVマップレイヤーを全て走査する
-    for uv_layer in uv_layers:
+    for index in reversed(range(len(uv_layers))):
         # UVマップレイヤーを全て削除する
-        uv_layers.remove(uv_layer)
+        uv_layers.remove(uv_layers[index])
     
     return
+
+# 指定オブジェクトの指定名のUVマップレイヤー以外を全て削除する
+def delete_uvlayer_others(arg_object:bpy.types.Object, arg_uvlayername:str) -> bool:
+    """指定オブジェクトの指定名のUVマップレイヤー以外を全て削除する
+
+    Args:
+        arg_object (bpy.types.Object): 指定オブジェクト
+        arg_uvlayername (str): 指定UVマップレイヤー名
+
+    Returns:
+        bool: 実行正否
+    """
+
+    # 指定オブジェクトがメッシュオブジェクトか確認する
+    if arg_object.type != 'MESH':
+        # メッシュオブジェクトでない場合は処理しない
+        return False
+
+    # 対象オブジェクトのメッシュデータを取得する
+    # メッシュデータ操作のマニュアル
+    # (https://docs.blender.org/api/current/bpy.types.Mesh.html)
+    meshdata = arg_object.data
+
+    # UVマップレイヤーのリストを取得する
+    # UVマップレイヤーのリスト操作のマニュアル
+    # (https://docs.blender.org/api/current/bpy.types.UVLoopLayers.html)
+    uv_layers = meshdata.uv_layers
+
+    # 指定名のUVマップレイヤーを取得する
+    # (get関数は対象が存在しない場合 None が返る)
+    target_uvlayer = uv_layers.get(arg_uvlayername)
+    
+    # 指定名のUVマップレイヤーが存在するか確認する
+    if target_uvlayer == None:
+        # 指定名のUVマップレイヤーが存在しない場合は処理しない
+        return False
+
+    # UVマップレイヤーを全て走査する
+    for index in reversed(range(len(uv_layers))):
+        # 指定のUVマップレイヤー名と名称が一致するか確認する
+        if uv_layers[index].name != arg_uvlayername:
+            # 名称が一致しない場合、UVマップレイヤーを削除する
+            uv_layers.remove(uv_layers[index])
+    
+    return True
 
 # 通常のUV展開を実行する
 def project_uv_normal(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
@@ -175,6 +241,9 @@ def project_uv_normal(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
     
     # オブジェクトを選択状態にする
     arg_object.select_set(True)
+
+    # 対象オブジェクトをアクティブに変更する
+    bpy.context.view_layer.objects.active = arg_object
  
     # 編集モードに移行する
     bpy.ops.object.mode_set(mode='EDIT', toggle=False)
@@ -215,6 +284,9 @@ def project_uv_smart(arg_object:bpy.types.Object) -> bpy.types.MeshUVLoopLayer:
     
     # オブジェクトを選択状態にする
     arg_object.select_set(True)
+
+    # 対象オブジェクトをアクティブに変更する
+    bpy.context.view_layer.objects.active = arg_object
  
     # 編集モードに移行する
     bpy.ops.object.mode_set(mode='EDIT', toggle=False)

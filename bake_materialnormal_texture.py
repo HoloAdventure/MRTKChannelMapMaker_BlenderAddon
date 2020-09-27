@@ -7,7 +7,8 @@ def bake_materialnormal_texture(
   arg_refobjects:list=[],
   arg_texturename:str="BakeTexture",
   arg_texturesize:int=2048,
-  arg_bakemargin:int=0) -> bpy.types.Image:
+  arg_bakemargin:int=0,
+  arg_floatbuffer:bool=False) -> bpy.types.Image:
     """指定オブジェクトの全てのマテリアルの法線情報を画像テクスチャにベイクする
 
     Args:
@@ -16,6 +17,7 @@ def bake_materialnormal_texture(
         arg_texturename (str, optional): 作成テクスチャ名. Defaults to "BakeTexture".
         arg_texturesize (int, optional): 作成テクスチャサイズ(px). Defaults to 2048.
         arg_bakemargin (int, optional): ベイク余白(px). Defaults to 0.
+        arg_floatbuffer (bool, optional): 32bitフロート有無. Defaults to False.
 
     Returns:
         bpy.types.Image: 作成テクスチャの参照
@@ -28,9 +30,10 @@ def bake_materialnormal_texture(
     texturenode_name = "ForBakeTextureNode"
 
     # 新規テクスチャを作成して参照を取得する
-    bake_image = make_new_image(
+    bake_image = make_new_floatimage(
         arg_texturename=arg_texturename,
-        arg_texturesize=arg_texturesize
+        arg_texturesize=arg_texturesize,
+        arg_floatbuffer=arg_floatbuffer
     )
 
     # 指定オブジェクトのマテリアルリストを取得する
@@ -84,13 +87,14 @@ def bake_materialnormal_texture(
 
 
 # 新規画像を作成する
-def make_new_image(arg_texturename:str="BakeTexture",
-  arg_texturesize:int=2048) -> bpy.types.Image:
+def make_new_floatimage(arg_texturename:str="BakeTexture",
+  arg_texturesize:int=2048, arg_floatbuffer:bool=False) -> bpy.types.Image:
     """新規画像を作成する
 
     Args:
         arg_texturename (str, optional): 作成テクスチャ名. Defaults to "BakeTexture".
         arg_texturesize (int, optional): 作成テクスチャサイズ. Defaults to 2048.
+        arg_floatbuffer (bool, optional): 32bitフロート有無. Defaults to False.
 
     Returns:
         bpy.types.Image: 作成画像の参照
@@ -102,7 +106,7 @@ def make_new_image(arg_texturename:str="BakeTexture",
         width=arg_texturesize,
         height=arg_texturesize,
         alpha=True,
-        float_buffer=True
+        float_buffer=arg_floatbuffer
     )
 
     return newimage

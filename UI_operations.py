@@ -90,6 +90,57 @@ class AO_BakeProperties(BakeProperties):
         self.ao_factor=arg_ao_factor     # AO係数
         self.ao_distance=arg_ao_distance # AO距離
 
+# ノーマルマップベイク実行時の拡張情報
+class Normal_BakeProperties(BakeProperties):
+    # コンストラクタの定義
+    def __init__(
+      self,
+      arg_execute_flg:bool=False,
+      arg_texture_name:str="",
+      arg_texture_size:int=0,
+      arg_bake_margin:int=0,
+      arg_float_buffer:bool=False
+      ):
+        """コンストラクタ
+
+        Args:
+            arg_execute_flg (bool, optional): ベイク実行フラグ. Defaults to False.
+            arg_texture_name (str, optional): テクスチャ名. Defaults to "".
+            arg_texture_size (int, optional): テクスチャサイズ. Defaults to 0.
+            arg_bake_margin (int, optional): ベイク余白(px). Defaults to 0.
+            arg_float_buffer (bool, optional): 32bitフロート有無. Defaults to False.
+        """
+        super(Normal_BakeProperties, self).__init__(
+            arg_execute_flg=arg_execute_flg,
+            arg_texture_name=arg_texture_name,
+            arg_texture_size=arg_texture_size,
+            arg_bake_margin=arg_bake_margin
+        )
+        self.float_buffer=arg_float_buffer   # 32bitフロート有無
+
+# UVレイヤー操作の定型情報
+class UVLayerProperties:
+    # コンストラクタの定義
+    def __init__(
+      self,
+      arg_multibake_flg:bool=False,
+      arg_baketo_newuv_flg:bool=False,
+      arg_input_uvlayer_name:str="",
+      arg_output_uvlayer_name:str="",
+      ):
+        """コンストラクタ
+
+        Args:
+            arg_multibake_flg (bool, optional): 複数オブジェクトベイクフラグ. Defaults to False.
+            arg_baketo_newuv_flg (bool, optional): 新規UV作成実行フラグ. Defaults to False.
+            arg_input_uvlayer_name (str, optional): 入力UVマップ名. Defaults to "".
+            arg_output_uvlayer_name (str, optional): 出力UVマップ名. Defaults to "".
+        """
+        self.multibake_flg=arg_multibake_flg                 # 複数オブジェクトベイクフラグ
+        self.baketo_newuv_flg=arg_baketo_newuv_flg           # 新規UV作成実行フラグ
+        self.input_uvlayer_name=arg_input_uvlayer_name       # 入力UVマップ名
+        self.output_uvlayer_name=arg_output_uvlayer_name     # 出力UVマップ名
+
 
 
 # マテリアル作成ボタンの処理を実行する
@@ -124,13 +175,13 @@ def UI_mrtk_channelmap_maker(
   arg_target_object:bpy.types.Object,
   arg_export_dir:str,
   arg_export_filepath:str,
-  arg_baketo_newuv:bool,
+  arg_uvlayer_prop:UVLayerProperties,
   arg_colorbake_prop:BakeProperties,
   arg_metallicbake_prop:BakeProperties,
   arg_smoothnessbake_prop:BakeProperties,
   arg_emissionbake_prop:BakeProperties,
   arg_occlusionbake_prop:AO_BakeProperties,
-  arg_normalbake_prop:BakeProperties,
+  arg_normalbake_prop:Normal_BakeProperties,
   ) -> str:
     """[summary]
 
@@ -150,25 +201,37 @@ def UI_mrtk_channelmap_maker(
     tobake_object = None
     frombake_objectlist = []
 
-    # 新しいUVへの展開が有効か確認する
-    if arg_baketo_newuv == True:
+    # 複数オブジェクトベイクフラグが有効か確認する
+    if arg_uvlayer_prop.multibake_flg == True:
         # 対象オブジェクトを複製する
-        duplicate_object = control_object.duplicate_object_target(arg_object=arg_target_object)
+        duplicate_object = control_object.setting_object_duplicate(arg_object=arg_target_object)
 
-        # 複製元オブジェクトの名前を取得する
-        base_name = arg_target_object.name
+        # 出力先のUVマップレイヤーを取得する
+        active_uvlayer = None
 
-        # 複製元オブジェクトの名前を変更する
-        arg_target_object.name = base_name + "_base"
+        # 新規UV作成実行フラグが有効か確認する
+        if arg_uvlayer_prop.baketo_newuv_flg == True:
+            # 複製オブジェクトのUVマップレイヤーを全て削除する
+            control_uvlayer.delete_uvlayer_all(arg_object=duplicate_object)
+        
+            # レンダリング時有効なUVマップレイヤーを作成/設定する
+            # UVマップレイヤーを削除済みのため、必ず新規のUV展開が実行される
+            active_uvlayer = control_uvlayer.setting_uvlayer_renderactive(
+                arg_object=duplicate_object,
+                arg_uvlayername=""
+            )
+        else:
+            # 複製オブジェクトの指定UVマップレイヤー以外のUVマップレイヤーを削除する
+            control_uvlayer.delete_uvlayer_others(
+                arg_object=duplicate_object,
+                arg_uvlayername=arg_uvlayer_prop.output_uvlayer_name
+            )
 
-        # 複製オブジェクトに複製元オブジェクトの名前を設定する
-        duplicate_object.name = base_name
-
-        # 複製オブジェクトのUVマップレイヤーを全て削除する
-        control_uvlayer.delete_uvlayer_all(arg_object=duplicate_object)
-
-        # 複製オブジェクトに通常のUV展開でUVマップレイヤーを作成する
-        active_uvlayer = control_uvlayer.project_uv_normal(arg_object=duplicate_object)
+            # レンダリング時有効なUVマップレイヤーを作成/設定する
+            active_uvlayer = control_uvlayer.setting_uvlayer_renderactive(
+                arg_object=duplicate_object,
+                arg_uvlayername=arg_uvlayer_prop.output_uvlayer_name
+            )
 
         # UVマップレイヤーの取得、作成に失敗したか確認する
         if active_uvlayer == None:
@@ -181,9 +244,11 @@ def UI_mrtk_channelmap_maker(
         # 参照元オブジェクトに複製元オブジェクトを指定する
         frombake_objectlist.append(arg_target_object)
     else:
-        # アクティブなUVマップレイヤーが存在するか確認する
-        # 存在しない場合は作成する
-        active_uvlayer = control_uvlayer.get_uvlayer(arg_object=arg_target_object)
+        # レンダリング時有効なUVマップレイヤーを作成/設定する
+        active_uvlayer = control_uvlayer.setting_uvlayer_renderactive(
+            arg_object=arg_target_object,
+            arg_uvlayername=arg_uvlayer_prop.input_uvlayer_name
+        )
 
         # UVマップレイヤーの取得、作成に失敗したか確認する
         if active_uvlayer == None:
@@ -301,7 +366,8 @@ def UI_mrtk_channelmap_maker(
             arg_refobjects=frombake_objectlist,
             arg_texturename=arg_normalbake_prop.texture_name,
             arg_texturesize=arg_normalbake_prop.texture_size,
-            arg_bakemargin=arg_normalbake_prop.bake_margin
+            arg_bakemargin=arg_normalbake_prop.bake_margin,
+            arg_floatbuffer=arg_normalbake_prop.float_buffer
         )
 
         # 指定ディレクトリに作成した画像ファイルを出力する(16ビット色深度)
@@ -324,7 +390,7 @@ def UI_mrtk_channelmap_maker(
 
 
     # 新しいUVへの展開が有効か確認する
-    if arg_baketo_newuv == True:
+    if arg_uvlayer_prop.multibake_flg == True:
         # 有効であれば複製元のオブジェクトを走査する
         for frombake_object in frombake_objectlist:
             # 複製元のオブジェクトを削除する

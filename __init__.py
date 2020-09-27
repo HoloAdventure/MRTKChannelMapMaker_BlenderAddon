@@ -10,7 +10,7 @@ from . import UI_operations
 bl_info = {
     "name": "HoloMon MRTK ChannelMap Maker Addon",   # プラグイン名
     "author": "HoloMon",                             # 制作者名
-    "version": (1, 11),                              # バージョン
+    "version": (1, 12),                              # バージョン
     "blender": (2, 80, 0),                           # 動作可能なBlenderバージョン
     "support": "TESTING",                            # サポートレベル
     "category": "Properties",                        # カテゴリ名
@@ -23,7 +23,7 @@ bl_info = {
 
 # 利用するタイプやメソッドのインポート
 from bpy.types import Operator, Panel, PropertyGroup
-from bpy.props import PointerProperty, BoolProperty, IntProperty, FloatProperty, StringProperty
+from bpy.props import PointerProperty, BoolProperty, IntProperty, FloatProperty, StringProperty, EnumProperty
 
 # 継承するクラスの命名規則は以下の通り
 # [A-Z][A-Z0-9_]*_(継承クラスごとの識別子)_[A-Za-z0-9_]+
@@ -153,7 +153,7 @@ class HOLOMON_PT_addon_mrtk_channelmap_maker(Panel):
         # 要素行を作成する
         objectslect_row = draw_layout.row()
         # オブジェクト選択用のカスタムプロパティを配置する
-        objectslect_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_objectslect", text="Target")
+        objectslect_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_objectselect", text="Target")
         # 要素行を作成する
         texturename_row = draw_layout.row()
         # テクスチャ名指定用のカスタムプロパティを配置する
@@ -168,23 +168,18 @@ class HOLOMON_PT_addon_mrtk_channelmap_maker(Panel):
         bakemargin_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_bakemargin")
 
         # 要素行を作成する
-        baketo_newuv_row = draw_layout.row()
-        # 新規スマートUV作成実行用のカスタムプロパティを配置する
-        baketo_newuv_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_baketo_newuv")
-
-        # 要素行を作成する
         button_row = draw_layout.row()
         # ベイクを実行するボタンを配置する
         button_row.operator("holomon.mrtk_channelmap_maker", icon='FILE_IMAGE')
 
-# マテリアルベイクのオプションパネル(3Dビュー)
-class HOLOMON_PT_addon_mrtk_channelmap_maker_option(Panel):
+# マテリアルベイクの追加マップオプションパネル(3Dビュー)
+class HOLOMON_PT_addon_mrtk_channelmap_maker_extmap_option(Panel):
     # パネルのラベル名を定義する
     # パネルを折りたたむパネルヘッダーに表示される
-    bl_label = "MRTK ChannelMap Options"
+    bl_label = "MRTK ChannelMap ExtMap Options"
     # クラスのIDを定義する
     # 命名規則は CATEGORY_PT_name
-    bl_idname = "HOLOMON_PT_addon_mrtk_channelmap_maker_option"
+    bl_idname = "HOLOMON_PT_addon_mrtk_channelmap_maker_extmap_option"
     # パネルを使用する領域を定義する
     # 利用可能な識別子は以下の通り
     #   EMPTY：無し
@@ -271,6 +266,11 @@ class HOLOMON_PT_addon_mrtk_channelmap_maker_option(Panel):
         # ノーマルマップサイズ指定用のカスタムプロパティを配置する
         normalmapsize_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_normalmapsize")
 
+        # 要素行を作成する
+        normalmapfloatbuffer_row = draw_layout.row()
+        # ノーマルマップ32bitフロート指定用のカスタムプロパティを配置する
+        normalmapfloatbuffer_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_normalmapfloatbuffer")
+
 
         # チャンネルマップ関連ベイク指定用のカスタムプロパティの有効無効を確認する
         if not (context.scene.holomon_mrtk_channelmap_maker.prop_baketype_metallic
@@ -288,8 +288,83 @@ class HOLOMON_PT_addon_mrtk_channelmap_maker_option(Panel):
 
         # ノーマルマップベイク指定用のカスタムプロパティの有効無効を確認する
         if not context.scene.holomon_mrtk_channelmap_maker.prop_baketype_normal:
-            # ノーマルマップベイク指定が無効の場合はオクルージョン設定の項目を無効化する
+            # ノーマルマップベイク指定が無効の場合はノーマルマップ設定の項目を無効化する
             normalmapsize_row.enabled = False
+            normalmapfloatbuffer_row.enabled = False
+
+# マテリアルベイクのUVマップオプションパネル(3Dビュー)
+class HOLOMON_PT_addon_mrtk_channelmap_maker_uv_option(Panel):
+    # パネルのラベル名を定義する
+    # パネルを折りたたむパネルヘッダーに表示される
+    bl_label = "MRTK ChannelMap UV Options"
+    # クラスのIDを定義する
+    # 命名規則は CATEGORY_PT_name
+    bl_idname = "HOLOMON_PT_addon_mrtk_channelmap_maker_uv_option"
+    # パネルを使用する領域を定義する
+    # 利用可能な識別子は以下の通り
+    #   EMPTY：無し
+    #   VIEW_3D：3Dビューポート
+    #   IMAGE_EDITOR：UV/画像エディター
+    #   NODE_EDITOR：ノードエディター
+    #   SEQUENCE_EDITOR：ビデオシーケンサー
+    #   CLIP_EDITOR：ムービークリップエディター
+    #   DOPESHEET_EDITOR：ドープシート
+    #   GRAPH_EDITOR：グラフエディター
+    #   NLA_EDITOR：非線形アニメーション
+    #   TEXT_EDITOR：テキストエディター
+    #   CONSOLE：Pythonコンソール
+    #   INFO：情報、操作のログ、警告、エラーメッセージ
+    #   TOPBAR：トップバー
+    #   STATUSBAR：ステータスバー
+    #   OUTLINER：アウトライナ
+    #   PROPERTIES：プロパティ
+    #   FILE_BROWSER：ファイルブラウザ
+    #   PREFERENCES：設定
+    bl_space_type = 'VIEW_3D'
+    # パネルが使用される領域を定義する
+    # 利用可能な識別子は以下の通り
+    # ['WINDOW'、 'HEADER'、 'CHANNELS'、 'TEMPORARY'、 'UI'、
+    #  'TOOLS'、 'TOOL_PROPS'、 'PREVIEW'、 'HUD'、 'NAVIGATION_BAR'、
+    #  'EXECUTE'、 'FOOTER'の列挙型、 'TOOL_HEADER']
+    bl_region_type = 'UI'
+    # パネルタイプのオプションを定義する
+    # DEFAULT_CLOSED：作成時にパネルを開くか折りたたむ必要があるかを定義する。
+    # HIDE_HEADER：ヘッダーを非表示するかを定義する。Falseに設定するとパネルにはヘッダーが表示される。
+    # デフォルトは {'DEFAULT_CLOSED'}
+    bl_options = {'DEFAULT_CLOSED'}
+    # パネルの表示順番を定義する
+    # 小さい番号のパネルは、大きい番号のパネルの前にデフォルトで順序付けられる
+    # デフォルトは 0
+    bl_order = 1
+    # パネルのカテゴリ名称を定義する
+    # 3Dビューポートの場合、サイドバーの名称になる
+    # デフォルトは名称無し
+    bl_category = "MRTK"
+ 
+    # 描画の定義
+    def draw(self, context):
+        # Operatorをボタンとして配置する
+        draw_layout = self.layout
+
+        # 要素行を作成する
+        input_uvlayer_row = draw_layout.row()
+        # 入力UVマップレイヤー選択用のカスタムプロパティを配置する
+        input_uvlayer_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_input_uvlayer", text="InputUV")
+        
+        # 要素行を作成する
+        output_uvlayer_row = draw_layout.row()
+        # 出力UVマップレイヤー選択用のカスタムプロパティを配置する
+        output_uvlayer_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_output_uvlayer", text="OutputUV")
+
+        # 要素行を作成する
+        baketo_newuv_row = draw_layout.row()
+        # 新規UV作成実行用のカスタムプロパティを配置する
+        baketo_newuv_row.prop(context.scene.holomon_mrtk_channelmap_maker, "prop_baketo_newuv")
+
+        # 新規UV作成実行用のカスタムプロパティの有効無効を確認する
+        if context.scene.holomon_mrtk_channelmap_maker.prop_baketo_newuv:
+            # 新規UV作成実行が有効の場合は出力UVマップレイヤー選択の項目を無効化する
+            output_uvlayer_row.enabled = False
 
 
 # Operatorクラスの作成
@@ -449,7 +524,7 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
 
 
         # カスタムプロパティから指定中のオブジェクトを取得する
-        target_object = context.scene.holomon_mrtk_channelmap_maker.prop_objectslect
+        target_object = context.scene.holomon_mrtk_channelmap_maker.prop_objectselect
 
         # 指定中のオブジェクトを確認する
         if target_object == None:
@@ -523,13 +598,12 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
             # 適切なノーマルマップサイズが指定されていない場合はエラーメッセージを表示する
             self.report({'ERROR'}, "Nothing : normal map size.")
             return {'CANCELLED'}
+            
+        # カスタムプロパティから指定中のノーマルマップフロート指定を取得する
+        normalmap_floatbuffer = context.scene.holomon_mrtk_channelmap_maker.prop_normalmapfloatbuffer
 
         # カラーテクスチャとの比率に合わせてノーマルマップ用のベイク余白を計算する
         normalmap_bakemargin = int(normalmap_size / int(colortexture_size / bake_margin))
-
-
-        # カスタムプロパティから新規スマートUV作成実行指定を取得する
-        baketo_newuv = context.scene.holomon_mrtk_channelmap_maker.prop_baketo_newuv
 
 
         # UIの設定から各種実行ベイクの情報を作成する
@@ -576,11 +650,34 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
         )
 
         # ノーマルベイクの情報を作成する
-        normal_BakeProperties = UI_operations.BakeProperties(
+        normal_BakeProperties = UI_operations.Normal_BakeProperties(
             arg_execute_flg=baketype_normal,
             arg_texture_name=texture_name + "_normal",
             arg_texture_size=normalmap_size,
-            arg_bake_margin=normalmap_bakemargin
+            arg_bake_margin=normalmap_bakemargin,
+            arg_float_buffer=normalmap_floatbuffer
+        )
+
+
+        # カスタムプロパティから新規UV作成実行指定を取得する
+        baketo_newuv = context.scene.holomon_mrtk_channelmap_maker.prop_baketo_newuv
+
+        # カスタムプロパティから入力UVマップレイヤー選択を取得する
+        input_uvlayer = context.scene.holomon_mrtk_channelmap_maker.prop_input_uvlayer
+
+        # カスタムプロパティから出力UVマップレイヤー選択を取得する
+        output_uvlayer = context.scene.holomon_mrtk_channelmap_maker.prop_output_uvlayer
+
+        # UVマップレイヤー選択と新規UV作成の指定から複数オブジェクトベイクの実行有無を判断する
+        multibake_execute = ( baketo_newuv or (input_uvlayer != output_uvlayer) )
+
+
+        # UVマップの関連設定からUVマップ指定の情報を作成する
+        uvmap_UVLayerProperties = UI_operations.UVLayerProperties(
+            arg_multibake_flg=multibake_execute,
+            arg_baketo_newuv_flg=baketo_newuv,
+            arg_input_uvlayer_name=input_uvlayer,
+            arg_output_uvlayer_name=output_uvlayer,
         )
 
         
@@ -589,7 +686,7 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
             arg_target_object=target_object,
             arg_export_dir=self.directory,
             arg_export_filepath=self.filepath,
-            arg_baketo_newuv=baketo_newuv,
+            arg_uvlayer_prop=uvmap_UVLayerProperties,
             arg_colorbake_prop=color_BakeProperties,
             arg_metallicbake_prop=metallic_BakeProperties,
             arg_smoothnessbake_prop=smoothness_BakeProperties,
@@ -609,7 +706,7 @@ class HOLOMON_OT_addon_mrtk_channelmap_maker(Operator):
 
 # PropertyGroupクラスの作成
 # 参考URL:https://docs.blender.org/api/current/bpy.types.PropertyGroup.html
-# マテリアル追加のプロパティ
+# マテリアル追加パネルのプロパティ
 class HOLOMON_addon_mrtk_material_maker_properties(PropertyGroup):
     # オブジェクト選択時のチェック関数を定義する
     def prop_object_select_poll(self, context, ):
@@ -619,7 +716,7 @@ class HOLOMON_addon_mrtk_material_maker_properties(PropertyGroup):
         return False
 
     # シーン上のパネルに表示するオブジェクト選択用のカスタムプロパティを定義する
-    prop_objectslect: PointerProperty(
+    prop_objectselect: PointerProperty(
         name = "Select Object",         # プロパティ名
         type = bpy.types.Object,        # タイプ
         description = "",               # 説明文
@@ -628,7 +725,7 @@ class HOLOMON_addon_mrtk_material_maker_properties(PropertyGroup):
     # ※ アクティブオブジェクトを指定する仕様としたため
     #    オブジェクト選択のカスタムプロパティは利用しない
 
-# マテリアルベイクのプロパティ
+# マテリアルベイクパネルのプロパティ
 class HOLOMON_addon_mrtk_channelmap_maker_properties(PropertyGroup):
     # オブジェクト選択時のチェック関数を定義する
     def prop_object_select_poll(self, context, ):
@@ -637,12 +734,8 @@ class HOLOMON_addon_mrtk_channelmap_maker_properties(PropertyGroup):
             return True
         return False
 
-    # ベイクタイプの更新時に実行する関数を定義する
-    def change_baketype(self, context):
-        print("change baketype")
-
     # シーン上のパネルに表示するオブジェクト選択用のカスタムプロパティを定義する
-    prop_objectslect: PointerProperty(
+    prop_objectselect: PointerProperty(
         name = "Select Object",         # プロパティ名
         type = bpy.types.Object,        # タイプ
         description = "",               # 説明文
@@ -652,109 +745,178 @@ class HOLOMON_addon_mrtk_channelmap_maker_properties(PropertyGroup):
 
     # シーン上のパネルに表示するテクスチャ名指定用のカスタムプロパティを定義する
     prop_texturename: StringProperty(
-        name="Texture Name",          # プロパティ名
-        default="BakeTexture",        # デフォルト値
-        maxlen=1024,                  # 最大文字列長
-        description="",               # 説明文
+        name = "Texture Name",         # プロパティ名
+        default = "BakeTexture",       # デフォルト値
+        maxlen = 1024,                 # 最大文字列長
+        description = "",              # 説明文
     )
 
     # シーン上のパネルに表示するカラーテクスチャサイズ指定用のカスタムプロパティを定義する
     prop_colortexturesize: IntProperty(
-        name = "Color Texture Size",  # プロパティ名
-        default=2048,                 # デフォルト値
-        description = "",             # 説明文
+        name = "Color Texture Size",   # プロパティ名
+        default = 2048,                # デフォルト値
+        description = "",              # 説明文
     )
 
     # シーン上のパネルに表示するノーマルマップサイズ指定用のカスタムプロパティを定義する
     prop_normalmapsize: IntProperty(
-        name = "Normal Map Size",     # プロパティ名
-        default=2048,                 # デフォルト値
-        description = "",             # 説明文
+        name = "Normal Map Size",      # プロパティ名
+        default = 2048,                # デフォルト値
+        description = "",              # 説明文
     )
 
     # シーン上のパネルに表示するチャンネルマップサイズ指定用のカスタムプロパティを定義する
     prop_channelmapsize: IntProperty(
-        name = "Channel Map Size",    # プロパティ名
-        default=2048,                 # デフォルト値
-        description = "",             # 説明文
+        name = "Channel Map Size",     # プロパティ名
+        default = 2048,                # デフォルト値
+        description = "",              # 説明文
     )
 
     # シーン上のパネルに表示するベイク余白用のカスタムプロパティを定義する
     prop_bakemargin: IntProperty(
-        name = "Bake Margin",         # プロパティ名
-        default=16,                   # デフォルト値
-        description = "",             # 説明文
+        name = "Bake Margin",          # プロパティ名
+        default = 16,                  # デフォルト値
+        description = "",              # 説明文
+    )
+    
+    # シーン上のパネルに表示するノーマルマップ32bitフロート用のカスタムプロパティを定義する
+    prop_normalmapfloatbuffer: BoolProperty(
+        name = "Normal 32bit Float",   # プロパティ名
+        default = False,               # デフォルト値
+        description = "",              # 説明文
     )
     
     # シーン上のパネルに表示するAO係数用のカスタムプロパティを定義する
     prop_aofactor: FloatProperty(
-        name = "Occlusion Factor",    # プロパティ名
-        default=1.0,                  # デフォルト値
-        description = "",             # 説明文
+        name = "Occlusion Factor",     # プロパティ名
+        default = 1.0,                 # デフォルト値
+        description = "",              # 説明文
     )
 
     # シーン上のパネルに表示するAO距離用のカスタムプロパティを定義する
     prop_aodistance: FloatProperty(
-        name = "Occlusion Distance",  # プロパティ名
-        default=10.0,                 # デフォルト値
-        description = "",             # 説明文
+        name = "Occlusion Distance",   # プロパティ名
+        default = 10.0,                # デフォルト値
+        description = "",              # 説明文
     )
     
+    # ベイクタイプの更新時に実行する関数を定義する
+    def prop_baketype_common_update(self, context):
+        print("change baketype")
+
     # シーン上のパネルに表示するカラーベイク実行用のカスタムプロパティを定義する
     prop_baketype_color: BoolProperty(
-        name = "BakeType Color",      # プロパティ名
-        default=True,                 # デフォルト値
-        description = "",             # 説明文
-        update=change_baketype,       # 更新時実行関数
+        name = "BakeType Color",               # プロパティ名
+        default = True,                        # デフォルト値
+        description = "",                      # 説明文
+        update = prop_baketype_common_update,  # 更新時実行関数
     )
     
     # シーン上のパネルに表示するメタリックベイク実行用のカスタムプロパティを定義する
     prop_baketype_metallic: BoolProperty(
-        name = "Bake Metallic Map",   # プロパティ名
-        default=False,                # デフォルト値
-        description = "",             # 説明文
-        update=change_baketype,       # 更新時実行関数
+        name = "Bake Metallic Map",            # プロパティ名
+        default = False,                       # デフォルト値
+        description = "",                      # 説明文
+        update = prop_baketype_common_update,  # 更新時実行関数
     )
     
     # シーン上のパネルに表示するオクルージョンベイク実行用のカスタムプロパティを定義する
     prop_baketype_occlusion: BoolProperty(
-        name = "Bake Occlusion Map",  # プロパティ名
-        default=False,                # デフォルト値
-        description = "",             # 説明文
-        update=change_baketype,       # 更新時実行関数
+        name = "Bake Occlusion Map",           # プロパティ名
+        default = False,                       # デフォルト値
+        description = "",                      # 説明文
+        update = prop_baketype_common_update,  # 更新時実行関数
     )
     
     # シーン上のパネルに表示するエミッションベイク実行用のカスタムプロパティを定義する
     prop_baketype_emission: BoolProperty(
-        name = "Bake Emission Map",   # プロパティ名
-        default=False,                # デフォルト値
-        description = "",             # 説明文
-        update=change_baketype,       # 更新時実行関数
+        name = "Bake Emission Map",            # プロパティ名
+        default = False,                       # デフォルト値
+        description = "",                      # 説明文
+        update = prop_baketype_common_update,  # 更新時実行関数
     )
     
     # シーン上のパネルに表示する滑らかさベイク実行用のカスタムプロパティを定義する
     prop_baketype_smoothness: BoolProperty(
-        name = "Bake Smoothness Map", # プロパティ名
-        default=False,                # デフォルト値
-        description = "",             # 説明文
-        update=change_baketype,       # 更新時実行関数
+        name = "Bake Smoothness Map",          # プロパティ名
+        default = False,                       # デフォルト値
+        description = "",                      # 説明文
+        update = prop_baketype_common_update,  # 更新時実行関数
     )
     
     # シーン上のパネルに表示するノーマルベイク実行用のカスタムプロパティを定義する
     prop_baketype_normal: BoolProperty(
-        name = "Bake Normal Map",     # プロパティ名
-        default=False,                # デフォルト値
-        description = "",             # 説明文
-        update=change_baketype,       # 更新時実行関数
+        name = "Bake Normal Map",              # プロパティ名
+        default = False,                       # デフォルト値
+        description = "",                      # 説明文
+        update  =prop_baketype_common_update,  # 更新時実行関数
     )
     
-    # シーン上のパネルに表示する新規スマートUV作成実行用のカスタムプロパティを定義する
+    # 新規UV作成実行の更新時に実行する関数を定義する
+    def prop_baketo_newuv_update(self, context):
+        print("change baketo_newuv")
+
+    # シーン上のパネルに表示する新規UV作成実行用のカスタムプロパティを定義する
     prop_baketo_newuv: BoolProperty(
-        name = "Bake To New UV",      # プロパティ名
-        default=False,                # デフォルト値
-        description = "",             # 説明文
+        name = "Bake To New UV",            # プロパティ名
+        default = False,                    # デフォルト値
+        description = "",                   # 説明文
+        update = prop_baketo_newuv_update,  # 更新時実行関数
     )
     
+    # UVマップレイヤーの選択肢の生成関数
+    def prop_uvlayer_select_items(self, context):
+        # UVマップレイヤーの一覧
+        items = []
+
+        # 現在の選択オブジェクトに合わせてUVレイヤー一覧を更新する
+        target_object = self.prop_objectselect
+
+        # 選択オブジェクトが非選択状態か確認する
+        if target_object == None:
+            # 非選択状態なら一覧を追加しない
+            return items
+
+        # 対象オブジェクトのメッシュデータを取得する
+        # メッシュデータ操作のマニュアル
+        # (https://docs.blender.org/api/current/bpy.types.Mesh.html)
+        meshdata = self.prop_objectselect.data
+
+        # UVマップレイヤーのリストを取得する
+        # UVマップレイヤーのリスト操作のマニュアル
+        # (https://docs.blender.org/api/current/bpy.types.UVLoopLayers.html)
+        uv_layers = meshdata.uv_layers
+
+        # UVマップレイヤーを全て走査する
+        for index, uv_layer in enumerate(uv_layers):
+            # UVマップの名称を取得する
+            # UVマップレイヤー操作のマニュアル
+            # (https://docs.blender.org/api/current/bpy.types.MeshUVLoopLayer.html)
+            uvlayer_name = uv_layer.name
+
+            # 選択肢(ID,名前,説明)を作成する
+            # EnumPropertyの選択肢要素のマニュアル
+            # (https://docs.blender.org/api/current/bpy.props.html#bpy.props.EnumProperty)
+            uvlayer_item = (uvlayer_name, uvlayer_name, '', 'GROUP_UVS', index)
+
+            # 選択肢を一覧に追加する
+            items.append(uvlayer_item)
+
+        return items
+
+    # シーン上のパネルに表示する入力UV用のカスタムプロパティを定義する
+    prop_input_uvlayer: EnumProperty(
+        name = "Select Input UVlayer",       # プロパティ名
+        items = prop_uvlayer_select_items,   # 一覧アイテム
+        description = "",                    # 説明文
+    )
+
+    # シーン上のパネルに表示する出力UV用のカスタムプロパティを定義する
+    prop_output_uvlayer: EnumProperty(
+        name = "Select Output UVlayer",      # プロパティ名
+        items = prop_uvlayer_select_items,   # 一覧アイテム
+        description = "",                    # 説明文
+    )
 
 
 # 登録に関する処理
@@ -764,7 +926,8 @@ regist_classes = (
     HOLOMON_OT_addon_mrtk_material_maker,
     HOLOMON_addon_mrtk_material_maker_properties,
     HOLOMON_PT_addon_mrtk_channelmap_maker,
-    HOLOMON_PT_addon_mrtk_channelmap_maker_option,
+    HOLOMON_PT_addon_mrtk_channelmap_maker_extmap_option,
+    HOLOMON_PT_addon_mrtk_channelmap_maker_uv_option,
     HOLOMON_OT_addon_mrtk_channelmap_maker,
     HOLOMON_addon_mrtk_channelmap_maker_properties,
 )
